@@ -45,40 +45,54 @@ void parse_format(std::ostringstream &ss, const char *format, const T &v, A... a
  * logger for single thread
  */
 class BaseLogger {
-  public:
-    BaseLogger(Level level = kError);
+public:
+  BaseLogger(Level level = kLog) : _log_level(level) {
+    for (int l = 0; l < kMaxLevel; ++l) {
+      _fp[l] = stdout;
+    }
+  }
 
-    void set_log_level(Level level) { _log_level = level; }
-    Level log_level() { return _log_level; };
+  void set_log_level(Level level) { _log_level = level; }
+  Level log_level() { return _log_level; };
 
-    void set_level_file(Level level, FILE *fp) { _fp[level] = fp; }
+  void set_level_file(Level level, FILE *fp) { _fp[level] = fp; }
 
-    void flush(Level level) { fflush(_fp[level]); }
-    void flush();
+  void flush(Level level) { fflush(_fp[level]); }
+  void flush() {
+    for (int l = 0; l < kMaxLevel; ++l) {
+      flush(static_cast<Level>(l));
+    }
+  }
 
-    template<typename ...A> void debug  (A... args) {
+  template<typename ...A> void debug  (A... args) {
 #ifdef DEBUG
-      print_wrapper (kDebug, args...);
+    print_wrapper (kDebug, args...);
 #endif
-    }
+  }
 
-    template<typename ...A> void log    (A... args) { 
-      print_wrapper (kLog, args...); 
-    }
-    template<typename ...A> void notice (A... args) { 
-      print_wrapper (kNotice, args...); 
-    }
-    template<typename ...A> void error  (A... args) { 
-      print_wrapper (kError, args...); 
-    }
+  template<typename ...A> void log    (A... args) {
+    print_wrapper (kLog, args...);
+  }
+  template<typename ...A> void notice (A... args) {
+    print_wrapper (kNotice, args...);
+  }
+  template<typename ...A> void error  (A... args) {
+    print_wrapper (kError, args...);
+  }
 
-  private:
-    template<typename ...A> void print_wrapper(Level level, A... args);
+private:
+  template<typename ...A> void print_wrapper(Level level, A... args);
 
-    Level _log_level { kError };
-    FILE *_fp[kMaxLevel];
+  Level _log_level { kError };
+  FILE *_fp[kMaxLevel];
 
-    static const char *kTag[kMaxLevel];
+  const char *kTag[kMaxLevel] {
+      "[DEBUG]  ",
+      "[LOG]    ",
+      "[NOTICE] ",
+      "[ERROR]  ",
+      ""
+  };
 };
 
 
@@ -86,9 +100,9 @@ class BaseLogger {
  * logger for multi thread
  */
 class MTLogger : BaseLogger {
-  public:
+public:
 
-  private:
+private:
 
 };
 
@@ -97,9 +111,9 @@ class MTLogger : BaseLogger {
  * logger for mpi
  */
 class MPILogger : BaseLogger {
-  public:
+public:
 
-  private:
+private:
 
 };
 
@@ -147,27 +161,6 @@ void parse_format(std::ostringstream &ss,
 
 /*----------------------------------------------------------------------------*/
 
-const char * BaseLogger::kTag[kMaxLevel] {
-    "[DEBUG]  ",
-    "[LOG]    ",
-    "[NOTICE] ",
-    "[ERROR]  ",
-    ""
-};
-
-
-BaseLogger::BaseLogger(Level level) : _log_level(level) {
-  for (int l = 0; l < kMaxLevel; ++l) {
-    _fp[l] = stdout;
-  }
-}
-
-
-void BaseLogger::flush() {
-  for (int l = 0; l < kMaxLevel; ++l) {
-    flush(static_cast<Level>(l));
-  }
-}
 
 
 template<typename ...A>
