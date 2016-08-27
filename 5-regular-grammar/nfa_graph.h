@@ -7,9 +7,11 @@
 
 #pragma once
 
+#include <cassert>
 #include <iostream>
 #include <list>
 #include <string>
+#include <unordered_set>
 
 namespace nfa_graph {
 
@@ -20,9 +22,6 @@ class NFANode;
  * Edge
  */
 class Edge {
-private:
-  NFANode *_v {nullptr};
-
 public:
   static Edge *createEdgeFromString(const std::string &s);
 
@@ -34,13 +33,17 @@ public:
     _v = v;
   }
 
+  virtual ~Edge() {}
+
   virtual bool Match(char c) const = 0;
 
   virtual int Delta() const = 0;
 
   virtual void Debug() const = 0;
 
-  virtual ~Edge() {}
+private:
+  NFANode *_v{nullptr};
+
 };
 
 
@@ -61,9 +64,6 @@ public:
 
 
 class CharEdge : public Edge {
-private:
-  char _c;
-
 public:
   CharEdge(char c) : _c(c) {}
 
@@ -76,8 +76,12 @@ public:
   }
 
   virtual void Debug() const {
-    std::cout << "char: " << _c << std::endl;
+    std::cout << "[char: " << _c << "]" << std::endl;
   }
+
+private:
+  char _c;
+
 };
 
 
@@ -85,7 +89,6 @@ public:
  *  Transition Diagram Node
  */
 class NFANode {
-
 public:
   enum StateType {
     kStart = 1 << 0,
@@ -148,10 +151,6 @@ private:
  * non-deterministic finite automaton
  */
 class NFA {
-private:
-  NFANode *_start {nullptr};
-  NFANode *_end {nullptr};
-
 public:
   static NFA *CreateSimpleNFAFromEdge(Edge *e);
 
@@ -160,40 +159,48 @@ public:
 public:
   NFA(NFANode *start, Edge *e, NFANode *end) : _start(start), _end(end) {
     _start->AddEdge(e, _end);
+    _nodes.insert(start);
+    _nodes.insert(end);
   }
 
   ~NFA() {
-    delete _start;
-    delete _end;
+    for (auto node : _nodes) {
+      delete node;
+    }
   }
 
-  const char *DFS(NFANode *curr, const char *beg, const char *end, bool is_match);
+  const char *DFS(NFANode *curr, const char *beg, const char *end,
+                  bool is_match);
 
   const char *Match(const char *beg, const char *end);
 
   const char *Search(const char *begin, const char *end);
 
-  void clear() {
-    _start = nullptr;
-    _end = nullptr;
-  }
-
   NFANode *start() {
     return _start;
-  }
-
-  void set_start(NFANode *start) {
-    _start = start;
   }
 
   NFANode *end() {
     return _end;
   }
 
-  void set_end(NFANode *end) {
-    _end = end;
+  NFANode *ReplaceStart(NFANode *start);
+
+  NFANode *ReplaceEnd(NFANode *end);
+
+  NFANode *RemoveStart();
+
+  NFANode *RemoveEnd();
+
+  void FetchNodes(NFA *nfa) {
+    _nodes.insert(nfa->_nodes.begin(), nfa->_nodes.end());
+    nfa->_nodes.clear();
   }
 
+private:
+  NFANode *_start{nullptr};
+  NFANode *_end{nullptr};
+  std::unordered_set<NFANode *> _nodes;
 };
 
 
@@ -201,33 +208,10 @@ public:
  * compose functions
  */
 
+NFA *DoConcatenate(NFA *lhs, NFA *rhs);
+
 inline NFA *Concatenate(NFA *lhs, NFA *rhs) {
-  lhs->end()->FetchEdges(rhs->start());
-  lhs->end()->ChangeNormal();
-  lhs->set_end(rhs->end());
-
-  delete rhs->start();
-  rhs->clear();
-  delete rhs;
-
-  return lhs;
-}
-
-inline NFA *LogicalOr(NFA *lhs, NFA *rhs) {
-  NFANode *new_end = new NFANode(NFANode::kEnd);
-  lhs->end()->AddEdge(new EpsilonEdge, new_end);
-  rhs->end()->AddEdge(new EpsilonEdge, new_end);
-  lhs->end()->ChangeNormal();
-  rhs->end()->ChangeNormal();
-
-  lhs->set_end(new_end);
-  lhs->start()->FetchEdges(rhs->start());
-
-  delete rhs->start();
-  rhs->clear();
-  delete rhs;
-
-  return lhs;
+  return DoConcatenate(lhs, rhs);
 }
 
 template<class ...A>
@@ -238,6 +222,13 @@ NFA *Concatenate(NFA *first, A... rest) {
     NFA *rest_result = Concatenate(rest...);
     return Concatenate(first, rest_result);
   }
+}
+
+
+NFA *DoLogicalOr(NFA *lhs, NFA *rhs);
+
+inline NFA *LogicalOr(NFA *lhs, NFA *rhs) {
+  return DoLogicalOr(lhs, rhs);
 }
 
 template<class ...A>
