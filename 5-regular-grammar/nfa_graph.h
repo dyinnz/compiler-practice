@@ -11,12 +11,15 @@
 #include <iostream>
 #include <list>
 #include <string>
+#include <vector>
+#include <set>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace nfa_graph {
 
 // pre-declaration
-class NFANode;
+class Node;
 
 /**
  * Edge
@@ -25,11 +28,11 @@ class Edge {
 public:
   static Edge *createEdgeFromString(const std::string &s);
 
-  NFANode *NextNode() const {
+  Node *NextNode() const {
     return _v;
   }
 
-  void SetNextNode(NFANode *v) {
+  void SetNextNode(Node *v) {
     _v = v;
   }
 
@@ -39,11 +42,12 @@ public:
 
   virtual int Delta() const = 0;
 
-  virtual void Debug() const = 0;
+  virtual std::string ToString() const = 0;
+
+  virtual Edge* Clone() const = 0;
 
 private:
-  NFANode *_v{nullptr};
-
+  Node *_v{nullptr};
 };
 
 
@@ -57,8 +61,12 @@ public:
     return 0;
   }
 
-  virtual void Debug() const {
-    std::cout << "[epsilon]" << std::endl;
+  virtual std::string ToString() const {
+    return "-Epsilon-";
+  }
+
+  virtual Edge* Clone() const {
+    return new EpsilonEdge;
   }
 };
 
@@ -75,8 +83,12 @@ public:
     return 1;
   }
 
-  virtual void Debug() const {
-    std::cout << "[char: " << _c << "]" << std::endl;
+  virtual std::string ToString() const {
+    return std::string("-") + _c + "-";
+  }
+
+  virtual Edge *Clone() const {
+    return new CharEdge(_c);
   }
 
 private:
@@ -88,7 +100,7 @@ private:
 /**
  *  Transition Diagram Node
  */
-class NFANode {
+class Node {
 public:
   enum StateType {
     kStart = 1 << 0,
@@ -97,9 +109,9 @@ public:
     kNormal = 1 << 2,
   };
 
-  NFANode(StateType type) : _type(type) {}
+  Node(StateType type) : _type(type) {}
 
-  ~NFANode() {
+  ~Node() {
     for (auto edge : _edges) {
       delete edge;
     }
@@ -109,8 +121,22 @@ public:
     return _type;
   }
 
+  constexpr static int kUnsetNumber {-1};
+
+  int number() const {
+    return _number;
+  }
+
+  void set_number(int number) {
+    _number = number;
+  }
+
   void ChangeNormal() {
     _type = kNormal;
+  }
+
+  std::list<Edge*> edges() {
+    return _edges;
   }
 
   class Iterator {
@@ -132,17 +158,18 @@ public:
     return Iterator(c, _edges.begin(), _edges.end());
   }
 
-  void AddEdge(Edge *e, NFANode *node) {
+  void AddEdge(Edge *e, Node *node) {
     e->SetNextNode(node);
     _edges.push_back(e);
   }
 
-  void FetchEdges(NFANode *other) {
+  void FetchEdges(Node *other) {
     _edges.splice(_edges.end(), other->_edges);
   }
 
 private:
   StateType _type;
+  int _number{kUnsetNumber};
   std::list<Edge *> _edges;
 };
 
@@ -157,7 +184,7 @@ public:
   static NFA *CreateSimpleNFAFromString(const std::string &s);
 
 public:
-  NFA(NFANode *start, Edge *e, NFANode *end) : _start(start), _end(end) {
+  NFA(Node *start, Edge *e, Node *end) : _start(start), _end(end) {
     _start->AddEdge(e, _end);
     _nodes.insert(start);
     _nodes.insert(end);
@@ -169,28 +196,28 @@ public:
     }
   }
 
-  const char *DFS(NFANode *curr, const char *beg, const char *end,
+  const char *DFS(Node *curr, const char *beg, const char *end,
                   bool is_match);
 
   const char *Match(const char *beg, const char *end);
 
   const char *Search(const char *begin, const char *end);
 
-  NFANode *start() {
+  Node *start() {
     return _start;
   }
 
-  NFANode *end() {
+  Node *end() {
     return _end;
   }
 
-  NFANode *ReplaceStart(NFANode *start);
+  Node *SetNewStart(Node *start);
 
-  NFANode *ReplaceEnd(NFANode *end);
+  Node *SetNewEnd(Node *end);
 
-  NFANode *RemoveStart();
+  Node *RemoveStart();
 
-  NFANode *RemoveEnd();
+  Node *RemoveEnd();
 
   void FetchNodes(NFA *nfa) {
     _nodes.insert(nfa->_nodes.begin(), nfa->_nodes.end());
@@ -198,9 +225,9 @@ public:
   }
 
 private:
-  NFANode *_start{nullptr};
-  NFANode *_end{nullptr};
-  std::unordered_set<NFANode *> _nodes;
+  Node *_start{nullptr};
+  Node *_end{nullptr};
+  std::unordered_set<Node *> _nodes;
 };
 
 
@@ -247,6 +274,63 @@ NFA *KleenStar(NFA *nfa);
 NFA *Optional(NFA *nfa);
 
 NFA *LeastOne(NFA *nfa);
+
+
+/**
+ *  deterministric finite automaton
+ */
+
+void RecordNFARecur(std::vector<Node*> &nodes, Node *u);
+
+inline std::vector<Node*> RecordNFA(NFA *nfa) {
+  std::vector<Node*> nodes;
+  RecordNFARecur(nodes, nfa->start());
+  return nodes;
+}
+
+
+void PrintNFARecur(Node *u, std::vector<bool> &visit);
+inline void PrintNFA(NFA *nfa, int max_number) {
+  std::vector<bool> visit(max_number);
+  PrintNFARecur(nfa->start(), visit);
+}
+
+class DFA;
+
+class DFAConverter {
+public:
+  static DFA* ConvertNFAToDFA(NFA *nfa);
+
+private:
+  DFAConverter(NFA *nfa) : _nfa(nfa) {}
+
+  void Expand(std::set<int> &s, Node *dfa_u);
+  DFA* Convert();
+  void EpsilonClosure(std::set<int> &s, Node *u);
+  std::set<int> EpsilonClosure(Node *u);
+
+  struct SetHash {
+    size_t operator() (const std::set<int> &s) const;
+  };
+
+  std::unordered_map<std::set<int>, Node*, SetHash> _set_visit;
+  std::vector<Node*> _nodes;
+  NFA *_nfa;
+  DFA *_dfa;
+};
+
+class DFA {
+public:
+  static DFA* ConvertFromNFA(NFA *nfa) {
+    return DFAConverter::ConvertNFAToDFA(nfa);
+  }
+
+private:
+  Node *_start {nullptr};
+  std::vector<Node*> _ends {nullptr};
+  std::unordered_set<Node*> _nodes;
+};
+
 
 
 } // end of namespace transition_map

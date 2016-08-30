@@ -11,6 +11,8 @@
 #include <sstream>
 #include <string>
 
+#define DEBUG
+
 namespace simple_logger {
 
 #define func_debug(__logger, __format, ...) do { \

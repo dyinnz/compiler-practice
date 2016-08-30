@@ -16,7 +16,7 @@ using namespace nfa_graph;
 BaseLogger logger;
 
 bool TEST_SimpleNFA() {
-  string s {"aa"};
+  string s{"aa"};
   NFA *nfa = NFA::CreateSimpleNFAFromString("a");
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
@@ -26,7 +26,7 @@ bool TEST_SimpleNFA() {
 }
 
 bool TEST_Concatenate() {
-  string s {"abc"};
+  string s{"abc"};
   NFA *nfa = Concatenate(NFA::CreateSimpleNFAFromString("a"),
                          NFA::CreateSimpleNFAFromString("b"),
                          NFA::CreateSimpleNFAFromString("c"));
@@ -39,7 +39,7 @@ bool TEST_Concatenate() {
 
 bool TEST_LogicalOr() {
   cout << __func__ << endl;
-  string s {"ay"};
+  string s{"ay"};
   NFA *nfa = LogicalOr(NFA::CreateSimpleNFAFromString("x"),
                        NFA::CreateSimpleNFAFromString("y"),
                        NFA::CreateSimpleNFAFromString("z"));
@@ -52,7 +52,7 @@ bool TEST_LogicalOr() {
 
 bool TEST_KleenStar() {
   cout << __func__ << endl;
-  string s {"aaa"};
+  string s{"aaa"};
   NFA *nfa = KleenStar(NFA::CreateSimpleNFAFromString("a"));
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
@@ -63,7 +63,7 @@ bool TEST_KleenStar() {
 
 bool TEST_Optional() {
   cout << __func__ << endl;
-  string s {"aa"};
+  string s{"aa"};
   NFA *nfa = Optional(NFA::CreateSimpleNFAFromString("a"));
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
@@ -74,7 +74,7 @@ bool TEST_Optional() {
 
 bool TEST_LeastOne() {
   cout << __func__ << endl;
-  string s {"aaa"};
+  string s{"aaa"};
   NFA *nfa = LeastOne(NFA::CreateSimpleNFAFromString("a"));
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
@@ -85,7 +85,7 @@ bool TEST_LeastOne() {
 
 bool TEST_Combination() {
   cout << __func__ << endl;
-  string s {"abaa"};
+  string s{"abaa"};
   NFA *nfa = KleenStar(LogicalOr(NFA::CreateSimpleNFAFromString("a"),
                                  NFA::CreateSimpleNFAFromString("b")));
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
@@ -93,6 +93,17 @@ bool TEST_Combination() {
   } else {
     return false;
   }
+}
+
+bool TEST_Number() {
+  cout << __func__ << endl;
+  string s {"abaa"};
+  NFA *nfa = LogicalOr(KleenStar(NFA::CreateSimpleNFAFromString("a")),
+                       Concatenate(NFA::CreateSimpleNFAFromString("a"),
+                                   LeastOne(NFA::CreateSimpleNFAFromString("b"))));
+  vector<Node*> nodes = RecordNFA(nfa);
+  PrintNFA(nfa, nodes.size());
+  return true;
 }
 
 int main() {
@@ -106,6 +117,8 @@ int main() {
   cout << TEST_Optional() << endl;
   cout << TEST_LeastOne() << endl;
   cout << TEST_Combination() << endl;
+  cout << TEST_Number() << endl;
+
 
   return 0;
 }
