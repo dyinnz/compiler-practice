@@ -45,7 +45,7 @@ bool TEST_LogicalOr() {
   NFA *nfa = LogicalOr(NFA::CreateFromString("x"),
                        NFA::CreateFromString("y"),
                        NFA::CreateFromString("z"));
-  vector<Node*> nodes = RecordNFA(nfa);
+  vector<Node *> nodes = RecordNFA(nfa);
   PrintFA(nfa->start(), nodes.size());
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
@@ -92,7 +92,7 @@ bool TEST_Combination() {
   string s{"abaa"};
   NFA *nfa = KleenStar(LogicalOr(NFA::CreateFromString("a"),
                                  NFA::CreateFromString("b")));
-  vector<Node*> nodes = RecordNFA(nfa);
+  vector<Node *> nodes = RecordNFA(nfa);
   PrintFA(nfa->start(), nodes.size());
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
@@ -103,18 +103,22 @@ bool TEST_Combination() {
 
 bool TEST_Number() {
   cout << __func__ << endl;
-  string s {"abaa"};
+  string s{"aaab"};
   NFA *nfa = LogicalOr(KleenStar(NFA::CreateFromString("a")),
                        Concatenate(NFA::CreateFromString("a"),
                                    LeastOne(NFA::CreateFromString("b"))));
-  vector<Node*> nodes = RecordNFA(nfa);
+  vector<Node *> nodes = RecordNFA(nfa);
   PrintFA(nfa->start(), nodes.size());
-  return true;
+
+  if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool TEST_Convert() {
   cout << __func__ << endl;
-  string s {"a"};
 
   {
     NFA *nfa = LogicalOr(KleenStar(NFA::CreateFromString("a")),
@@ -130,6 +134,14 @@ bool TEST_Convert() {
   DFA *dfa = DFA::ConvertFromNFA(nfa);
   logger.debug("dfa size: {}", dfa->size());
   PrintFA(dfa->start(), dfa->size());
+
+  string s{"abbb"};
+
+  if (dfa->Match(s.c_str(), s.c_str() + s.length())) {
+    return true;
+  } else {
+    return false;
+  }
 
   return true;
 }

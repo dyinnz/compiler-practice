@@ -130,7 +130,7 @@ Node *NFA::RemoveEnd() {
 
 const char *
 NFA::MatchDFS(Node *curr, const char *beg, const char *end) {
-  logger.log("node [{}], type [{}]", curr->number(), curr->Type());
+  logger.log("{} node {}:{}", curr->number(), curr->TypeString());
 
   if (curr->IsEnd()) {
     // recurse base, arrive END state
@@ -284,6 +284,7 @@ void PrintFARecur(Node *u, vector<bool> &visit) {
 
 /*----------------------------------------------------------------------------*/
 
+// for debug
 string to_string(const set<int> &num_set) {
   string str{"{"};
   for (int num : num_set) {
@@ -293,21 +294,15 @@ string to_string(const set<int> &num_set) {
   return str;
 }
 
+/**
+ * class DFAConverter
+ */
 size_t DFAConverter::SetHash::operator()(const std::set<int> &s) const {
   size_t value = 0;
   for (int num : s) {
     value |= num % sizeof(size_t);
   }
   return value;
-}
-
-
-pair<Node *, bool> &DFAConverter::FindNodeBySet(const std::set<int> &s) {
-  auto iter = _set_to_dfa_node.find(s);
-  if (_set_to_dfa_node.end() == iter) {
-    iter = _set_to_dfa_node.insert({s, {new Node(Node::kNormal), false}}).first;
-  }
-  return iter->second;
 }
 
 
@@ -363,8 +358,10 @@ DFAConverter::GetAdjacentSet(const std::set<int> &curr_set, char c) {
   set<int> adjacent_set;
   for (int num : curr_set) {
     for (Edge *edge : _nfa_nodes[num]->edges()) {
-      const set<int> &e_closure = EpsilonClosure(edge->NextNode());
-      adjacent_set.insert(e_closure.begin(), e_closure.end());
+      if (edge->test(c)) {
+        const set<int> &e_closure = EpsilonClosure(edge->NextNode());
+        adjacent_set.insert(e_closure.begin(), e_closure.end());
+      }
     }
   }
   return adjacent_set;
@@ -376,36 +373,35 @@ void DFAConverter::ConstructDFADiagram() {
   _dfa->_start = start_dfa_node;
 
   set<int> start_set = EpsilonClosure(_nfa->start());
-  _set_to_dfa_node.insert({start_set, {start_dfa_node, false}});
+  _set_to_dfa_node.insert({start_set, start_dfa_node});
 
   std::queue<set<int>> q;
   q.push(start_set);
 
   while (!q.empty()) {
     set<int> &curr_set = q.front();
+    Node *dfa_curr = _set_to_dfa_node[curr_set];
 
     logger.log("current set {}", to_string(curr_set));
 
-    pair<Node *, bool> &curr_node_pair = FindNodeBySet(curr_set);
-    curr_node_pair.second = true;
-
     Edge::EdgeChars chars = GetSetEdgeChars(curr_set);
-
     for (char c = 0; c < CHAR_MAX; ++c) {
       if (chars.test(c)) {
 
         set<int> adjacent_set = GetAdjacentSet(curr_set, c);
-        pair<Node *, bool> &node_pair = FindNodeBySet(adjacent_set);
 
-        logger.log("adjacent set {}", to_string(adjacent_set));
-
-        if (!node_pair.second) {
-          // unhandled dfa node, push to queue
+        auto iter = _set_to_dfa_node.find(adjacent_set);
+        if (_set_to_dfa_node.end() == iter) {
+          iter = _set_to_dfa_node.insert(
+              {adjacent_set, new Node(Node::kNormal)}).first;
           q.push(adjacent_set);
         }
+        Node *dfa_adjacent = iter->second;
 
-        curr_node_pair.first->AddEdge(Edge::CreateFromChar(c),
-                                      node_pair.first);
+        logger.log("char {}: adjacent set {}, node: {}", c,
+                   to_string(adjacent_set), dfa_adjacent);
+
+        dfa_curr->AddEdge(Edge::CreateFromChar(c), dfa_adjacent);
       }
     }
 
@@ -417,7 +413,8 @@ void DFAConverter::ConstructDFADiagram() {
 void DFAConverter::CollectNodes() {
   for (auto p : _set_to_dfa_node) {
     const set<int> &s = p.first;
-    Node *dfa_node = p.second.first;
+    Node *dfa_node = p.second;
+
     dfa_node->set_number(_dfa->_nodes.size());
     _dfa->_nodes.push_back(dfa_node);
 
@@ -446,13 +443,51 @@ DFA *DFAConverter::Convert() {
 }
 
 
-DFA *DFAConverter::ConvertNFAToDFA(NFA *nfa) {
+DFA *DFAConverter::ConvertFromNFA(NFA *nfa) {
   return DFAConverter(nfa).Convert();
 }
 
+/*----------------------------------------------------------------------------*/
 
+/**
+ *  class DFA
+ */
 DFA *DFA::ConvertFromNFA(NFA *nfa) {
-  return DFAConverter::ConvertNFAToDFA(nfa);
+  return DFAConverter::ConvertFromNFA(nfa);
+}
+
+
+const char *DFA::Match(const char *beg, const char *end) {
+  const char *s = beg;
+  Node *curr_node = _start;
+
+  auto find_next_node = [&](Node *u, char c) -> Node * {
+    for (Edge *edge : u->edges()) {
+      if (edge->test(c)) return edge->NextNode();
+    }
+    return nullptr;
+  };
+
+  logger.debug("{}:{}", curr_node->number(), curr_node->TypeString());
+
+  while (s != end) {
+    Node *next_node = find_next_node(curr_node, *s);
+    if (nullptr == next_node) {
+      return nullptr;
+    }
+
+    curr_node = next_node;
+    s += 1;
+
+    logger.debug("{}:{}", curr_node->number(), curr_node->TypeString());
+  }
+
+  return curr_node->IsEnd() ? s : nullptr;
+}
+
+
+const char *DFA::Search(const char *begin, const char *end) {
+  return nullptr;
 }
 
 } // end of namespace nfa_graph

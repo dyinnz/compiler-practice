@@ -179,11 +179,7 @@ public:
     }
   }
 
-  const char *MatchDFS(Node *curr, const char *beg, const char *end);
-
   const char *Match(const char *beg, const char *end);
-
-  const char *SearchDFS(Node *curr, const char *beg, const char *end);
 
   const char *Search(const char *begin, const char *end);
 
@@ -207,6 +203,11 @@ public:
     _nodes.insert(nfa->_nodes.begin(), nfa->_nodes.end());
     nfa->_nodes.clear();
   }
+
+private:
+  const char *MatchDFS(Node *curr, const char *beg, const char *end);
+
+  const char *SearchDFS(Node *curr, const char *beg, const char *end);
 
 private:
   Node *_start{nullptr};
@@ -287,7 +288,7 @@ class DFA;
 
 class DFAConverter {
 public:
-  static DFA *ConvertNFAToDFA(NFA *nfa);
+  static DFA *ConvertFromNFA(NFA *nfa);
 
 private:
   DFAConverter(NFA *nfa) : _nfa(nfa) {}
@@ -296,7 +297,7 @@ private:
     size_t operator()(const std::set<int> &s) const;
   };
 
-  std::pair<Node *, bool>& FindNodeBySet(const std::set<int> &s);
+  std::pair<Node *, bool> &FindNodeBySet(const std::set<int> &s);
 
   void ConversionPreamble();
 
@@ -315,8 +316,7 @@ private:
   DFA *Convert();
 
 private:
-  std::unordered_map<std::set<int>, std::pair<Node *, bool>, SetHash>
-      _set_to_dfa_node;
+  std::unordered_map<std::set<int>, Node *, SetHash> _set_to_dfa_node;
   std::vector<std::set<int>> _e_closures;
   std::vector<Node *> _nfa_nodes;
   NFA *_nfa;
@@ -341,6 +341,10 @@ public:
   Node *start() {
     return _start;
   }
+
+  const char *Match(const char *beg, const char *end);
+
+  const char *Search(const char *begin, const char *end);
 
 private:
   Node *_start{nullptr};
