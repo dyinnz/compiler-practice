@@ -142,6 +142,25 @@ bool TEST_Convert() {
   } else {
     return false;
   }
+}
+
+bool TEST_MinimizeDFA() {
+  cout << __func__ << endl;
+
+  NFA *nfa = LogicalOr(NFA::CreateFromString("a"),
+                       Concatenate(
+                           LeastOne(Concatenate(NFA::CreateFromString("x"),
+                                                NFA::CreateFromString("x"))),
+                           NFA::CreateFromString("a")));
+  vector<Node *> nfa_nodes = RecordNFA(nfa);
+  PrintFA(nfa->start(), nfa_nodes.size());
+  ClearNFARecordRecur(nfa_nodes);
+
+
+  DFA *dfa = DFA::ConvertFromNFA(nfa);
+  PrintFA(dfa->start(), dfa->size());
+
+  DFA *minimum_dfa = DFAOptimizer::Minimize(dfa);
 
   return true;
 }
@@ -159,6 +178,7 @@ int main() {
   cout << TEST_Combination() << endl;
   cout << TEST_Number() << endl;
   cout << TEST_Convert() << endl;
+  cout << TEST_MinimizeDFA() << endl;
 
   return 0;
 }

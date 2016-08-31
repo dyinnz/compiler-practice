@@ -5,6 +5,7 @@
  * Date:   2016-08-25
  ******************************************************************************/
 
+#include <algorithm>
 #include <iostream>
 #include <queue>
 #include "simplelogger.h"
@@ -14,6 +15,8 @@ using std::vector;
 using std::string;
 using std::set;
 using std::pair;
+using std::list;
+using std::unordered_map;
 using std::cout;
 using std::endl;
 
@@ -489,5 +492,157 @@ const char *DFA::Match(const char *beg, const char *end) {
 const char *DFA::Search(const char *begin, const char *end) {
   return nullptr;
 }
+
+/*----------------------------------------------------------------------------*/
+
+/**
+ * class DFAOptimizer
+ */
+DFA *DFAOptimizer::Minimize(DFA *normal) {
+  return DFAOptimizer(normal).Minimize();
+}
+
+
+void DFAOptimizer::InitPartition() {
+  _partition.emplace_back();
+  _partition.emplace_back();
+
+  set<int> &start_set = _partition.front();
+  set<int> &end_set = _partition.back();
+
+  for (Node *node : _normal->_nodes) {
+
+    if (node->IsEnd()) {
+      end_set.insert(node->number());
+    } else {
+      start_set.insert(node->number());
+    }
+  }
+
+  if (start_set.empty()) {
+    _partition.pop_front();
+  }
+}
+
+
+void DFAOptimizer::BuildPartitionMap() {
+  for (set<int> &s : _partition) {
+    for (int num : s) {
+      _partition_map[num] = &s;
+    }
+  }
+}
+
+Edge::EdgeChars DFAOptimizer::GetSetEdgeChars(const std::set<int> &s) {
+  Edge::EdgeChars chars;
+  for (int num : s) {
+    for (Edge *edge : _normal_nodes[num]->edges()) {
+      chars |= edge->chars();
+    }
+  }
+  return chars;
+}
+
+
+bool DFAOptimizer::PartSetByChar(list<set<int>> &parted_sets,
+                                 const set<int> &curr_set, char c) {
+  logger.log("part set: {} by {}", to_string(curr_set), c);
+
+  unordered_map<set<int> *, set<int>> old_to_new;
+  for (int u_num : curr_set) {
+
+    bool is_match = false;
+    for (Edge *edge : _normal_nodes[u_num]->edges()) {
+      if (edge->test(c)) {
+        int v_num = edge->NextNode()->number();
+        old_to_new[_partition_map[v_num]].insert(u_num);
+        is_match = true;
+      }
+    }
+
+    if (!is_match) {
+      old_to_new[nullptr].insert(u_num);
+    }
+  }
+
+  bool is_parted = false;
+  for (auto p : old_to_new) {
+    if (p.second != curr_set) {
+      is_parted = true;
+      PartSetByChar(parted_sets, p.second, c);
+    }
+  }
+
+  if (is_parted) {
+    auto iter = std::unique(parted_sets.begin(), parted_sets.end());
+    parted_sets.erase(iter, parted_sets.end());
+
+  } else {
+    parted_sets.push_back(curr_set);
+  }
+  return is_parted;
+}
+
+
+void DFAOptimizer::TryPartEachSet() {
+
+  size_t last_size = 0;
+  list<set<int>> new_partition;
+  do {
+    logger.log("new loop");
+
+    last_size = _partition.size();
+    new_partition.clear();
+
+    BuildPartitionMap();
+
+    for (set<int> &curr_set : _partition) {
+
+      logger.log("current set: {}", to_string(curr_set));
+
+      list<set<int>> parted_sets;
+      Edge::EdgeChars chars = GetSetEdgeChars(curr_set);
+      bool is_parted = false;
+
+      for (char c = 0; c < CHAR_MAX; ++c) {
+        if (chars.test(c)) {
+          is_parted = PartSetByChar(parted_sets, curr_set, c);
+          if (is_parted) {
+            new_partition.splice(new_partition.begin(), parted_sets);
+            break;
+          }
+        }
+      }
+
+      if (!is_parted) {
+        new_partition.push_back(curr_set);
+      }
+    }
+
+    std::swap(new_partition, _partition);
+  } while (last_size < _partition.size());
+
+  logger.log("end of partition");
+  for (auto &s : _partition) {
+    logger.log("final parted set: {}", to_string(s));
+  }
+}
+
+
+DFA *DFAOptimizer::Minimize() {
+
+  InitPartition();
+  if (_partition.size() <= 1) {
+    // need not minimizing
+    return _normal;
+  }
+
+  _minimum = new DFA;
+
+  TryPartEachSet();
+
+  return _minimum;
+}
+
 
 } // end of namespace nfa_graph

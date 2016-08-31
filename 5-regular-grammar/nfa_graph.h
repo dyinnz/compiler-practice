@@ -7,17 +7,18 @@
 
 #pragma once
 
+#include <climits>
 #include <cassert>
+
 #include <iostream>
-#include <list>
+#include <functional>
 #include <string>
+#include <bitset>
 #include <vector>
+#include <list>
 #include <set>
 #include <unordered_set>
 #include <unordered_map>
-#include <bitset>
-#include <functional>
-#include <climits>
 
 #include "utility.h"
 
@@ -274,6 +275,13 @@ inline std::vector<Node *> RecordNFA(NFA *nfa) {
 }
 
 
+inline void ClearNFARecordRecur(std::vector<Node *> &nodes) {
+  for (Node *node : nodes) {
+    node->set_number(Node::kUnsetNumber);
+  }
+}
+
+
 void PrintFARecur(Node *u, std::vector<bool> &visit);
 
 inline void PrintFA(Node *start, int max_number) {
@@ -296,8 +304,6 @@ private:
   struct SetHash {
     size_t operator()(const std::set<int> &s) const;
   };
-
-  std::pair<Node *, bool> &FindNodeBySet(const std::set<int> &s);
 
   void ConversionPreamble();
 
@@ -333,6 +339,8 @@ public:
 
   friend class DFAConverter;
 
+  friend class DFAOptimizer;
+
 public:
   size_t size() {
     return _nodes.size();
@@ -350,6 +358,40 @@ private:
   Node *_start{nullptr};
   std::vector<Node *> _nodes;
   std::vector<Node *> _ends;
+};
+
+
+/**
+ * class DFAOptimizer
+ */
+class DFAOptimizer {
+public:
+  static DFA *Minimize(DFA *normal);
+
+private:
+  DFAOptimizer(DFA *normal) : _normal(normal), _normal_nodes(_normal->_nodes) {
+    _partition_map.resize(_normal_nodes.size());
+  }
+
+  void InitPartition();
+
+  void BuildPartitionMap();
+
+  Edge::EdgeChars GetSetEdgeChars(const std::set<int> &s);
+
+  bool PartSetByChar(std::list<std::set<int>> &parted_curr_set,
+                     const std::set<int> &curr_set, char c);
+
+  void TryPartEachSet();
+
+  DFA *Minimize();
+
+private:
+  DFA *_minimum{nullptr};
+  DFA *_normal{nullptr};
+  std::vector<Node *> _normal_nodes;
+  std::list<std::set<int>> _partition;
+  std::vector<std::set<int> *> _partition_map;
 };
 
 
