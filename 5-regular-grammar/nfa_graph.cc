@@ -629,6 +629,41 @@ void DFAOptimizer::TryPartEachSet() {
 }
 
 
+void DFAOptimizer::ConstructFromSets() {
+  std::vector<Node *> _normal_to_min(_normal_nodes.size());
+
+  for (set<int> &s : _partition) {
+    auto *node = new Node(Node::kNormal);
+    node->set_number(_minimum->_nodes.size());
+    _minimum->_nodes.push_back(node);
+
+    for (int old_num : s) {
+      _normal_to_min[old_num] = node;
+
+      if (_normal_nodes[old_num]->IsStart()) {
+        node->SetType(Node::kStart);
+        _minimum->_start = node;
+      }
+      if (_normal_nodes[old_num]->IsEnd()) {
+        node->SetType(Node::kEnd);
+        _minimum->_ends.push_back(node);
+      }
+    }
+  }
+
+  for (set<int> &s : _partition) {
+    Node *u = _normal_to_min[*s.begin()];
+
+    for (int num : s) {
+      for (Edge *edge : _normal_nodes[num]->edges()) {
+        Node *v = _normal_to_min[edge->NextNode()->number()];
+        u->AddEdge(new Edge(*edge), v);
+      }
+    }
+  }
+}
+
+
 DFA *DFAOptimizer::Minimize() {
 
   InitPartition();
@@ -640,6 +675,8 @@ DFA *DFAOptimizer::Minimize() {
   _minimum = new DFA;
 
   TryPartEachSet();
+
+  ConstructFromSets();
 
   return _minimum;
 }

@@ -161,8 +161,15 @@ bool TEST_MinimizeDFA() {
   PrintFA(dfa->start(), dfa->size());
 
   DFA *minimum_dfa = DFAOptimizer::Minimize(dfa);
+  PrintFA(minimum_dfa->start(), minimum_dfa->size());
 
-  return true;
+  string s{"xxxxxxa"};
+
+  if (minimum_dfa->Match(s.c_str(), s.c_str() + s.length())) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 int main() {

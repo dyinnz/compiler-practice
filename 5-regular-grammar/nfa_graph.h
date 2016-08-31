@@ -384,6 +384,8 @@ private:
 
   void TryPartEachSet();
 
+  void ConstructFromSets();
+
   DFA *Minimize();
 
 private:
