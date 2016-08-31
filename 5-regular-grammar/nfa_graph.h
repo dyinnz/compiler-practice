@@ -22,7 +22,7 @@
 
 #include "utility.h"
 
-namespace nfa_graph {
+namespace finite_automaton {
 
 // pre-declaration
 class Node;

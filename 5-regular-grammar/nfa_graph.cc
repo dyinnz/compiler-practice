@@ -22,7 +22,7 @@ using std::endl;
 
 extern simple_logger::BaseLogger logger;
 
-namespace nfa_graph {
+namespace finite_automaton {
 
 /*----------------------------------------------------------------------------*/
 
@@ -682,4 +682,4 @@ DFA *DFAOptimizer::Minimize() {
 }
 
 
-} // end of namespace nfa_graph
+} // end of namespace finite_automaton

@@ -11,7 +11,7 @@
 
 using namespace std;
 using namespace simple_logger;
-using namespace nfa_graph;
+using namespace finite_automaton;
 
 BaseLogger logger;
 
