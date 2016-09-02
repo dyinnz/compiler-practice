@@ -187,5 +187,16 @@ int main() {
   cout << TEST_Convert() << endl;
   cout << TEST_MinimizeDFA() << endl;
 
+  {
+    cout << "begin of block" << endl;
+    int *p = new int {99};
+    ScopeGuard [=] {
+      cout << "hello world" << endl;
+      delete p;
+    };
+    cout << "end of block" << endl;
+  }
+  cout << "out of block" << endl;
+
   return 0;
 }

@@ -7,44 +7,55 @@
 
 #pragma once
 
-#include <functional>
+#include <utility>
 
+/**
+ * Scope Guarder
+ */
+template <class T>
 class ScopeGuarder {
 public:
-  ScopeGuarder(std::function<void()> &&guard) : _guard(guard) {}
+  ScopeGuarder(T &&guard) : _guard(std::move(guard)) {}
+  ~ScopeGuarder() { _guard();  }
 
-  ScopeGuarder(ScopeGuarder &&) = default;
-
-  ~ScopeGuarder() { _guard(); }
+  ScopeGuarder(ScopeGuarder&&) = default;
 
 private:
-  std::function<void()> _guard;
+  ScopeGuarder& operator=(ScopeGuarder&&) = delete;
+  ScopeGuarder& operator=(const ScopeGuarder&) = delete;
+  ScopeGuarder(const ScopeGuarder&) = delete;
 
-  ScopeGuarder &operator=(ScopeGuarder &&) = delete;
-
-  ScopeGuarder &operator=(const ScopeGuarder &) = delete;
-
-  ScopeGuarder(const ScopeGuarder &) = delete;
+  T _guard;
 };
 
-#define ScopeGuard ScopeGuarder __FILE__##__LINE__##scope_guarder = \
-(std::function<void()>)[&]()
+class ScopeGuarderEmptyType {};
+
+template <class T>
+inline ScopeGuarder<T> operator+(ScopeGuarderEmptyType , T &&guard) {
+  return ScopeGuarder<T>(std::move(guard));
+}
+
+#define ScopeGuard auto __FILE__##__LINE__##scope_guarder \
+  = ScopeGuarderEmptyType() +
 
 
+/**
+ * class filter_wrapper
+ */
 template<class C, class F>
-class filter_wrapper {
+class FilterWrapper {
 public:
-  filter_wrapper(C container, F filter) : _container(container),
+  FilterWrapper(C container, F filter) : _container(container),
                                           _filter(filter) {}
 
-  class filter_iterator {
+  class FilterIterator {
   public:
     typedef typename C::const_iterator inner_iterator;
 
-    filter_iterator(inner_iterator curr, inner_iterator end, F filter) :
+    FilterIterator(inner_iterator curr, inner_iterator end, F filter) :
         _curr(curr), _end(end), _filter(filter) {}
 
-    filter_iterator &operator++() {
+    FilterIterator &operator++() {
       if (_curr != _end) {
         for (++_curr; _curr != _end; ++_curr) {
           if (_filter(*_curr)) {
@@ -59,7 +70,7 @@ public:
       return *_curr;
     }
 
-    bool operator!=(const filter_iterator &rhs) {
+    bool operator!=(const FilterIterator &rhs) {
       return _curr != rhs._curr;
     }
 
@@ -69,7 +80,7 @@ public:
     F _filter;
   };
 
-  typedef const filter_iterator const_iterator;
+  typedef const FilterIterator const_iterator;
   typedef const typename C::const_reference const_reference;
 
   const_iterator begin() {
@@ -92,7 +103,7 @@ private:
 };
 
 template<class C, class F>
-filter_wrapper<C, F> filter_container(C container, F filter) {
-  return filter_wrapper<C, F>(container, filter);
+FilterWrapper<C, F> FilterContainer(C container, F filter) {
+  return FilterWrapper<C, F>(container, filter);
 };
 

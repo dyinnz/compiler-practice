@@ -10,6 +10,7 @@
 #include <climits>
 #include <cassert>
 
+#include <memory>
 #include <iostream>
 #include <functional>
 #include <string>
@@ -32,7 +33,7 @@ class Node;
  */
 class Edge {
 public:
-  typedef std::bitset<CHAR_MAX + 1> EdgeChars;
+  typedef std::bitset<CHAR_MAX + 1> CharMasks;
 
   static Edge *CreateEpsilon() {
     return new Edge;
@@ -45,38 +46,38 @@ public:
 
   static Edge *Merge(Edge *lhs, Edge *rhs);
 
-  friend std::string to_string(Edge *edge);
+  friend std::string to_string(const Edge &edge);
 
 public:
-  Node *NextNode() const {
-    return _v;
+  Node *next_node() {
+    return _next_node;
   }
 
-  void SetNextNode(Node *v) {
-    _v = v;
+  void set_next_node(Node *v) {
+    _next_node = v;
   }
 
   bool IsEpsilon() const {
-    return _chars.none();
+    return _char_masks.none();
   }
 
   bool test(char c) const {
-    return _chars.test(c);
+    return _char_masks.test(c);
   }
 
-  EdgeChars chars() {
-    return _chars;
+  const CharMasks& char_masks() const {
+    return _char_masks;
   }
 
 
 private:
   void set(char c) {
-    _chars.set(c);
+    _char_masks.set(c);
   }
 
 private:
-  EdgeChars _chars;
-  Node *_v{nullptr};
+  CharMasks _char_masks;
+  Node *_next_node{nullptr};
 };
 
 
@@ -85,12 +86,10 @@ private:
  */
 class Node {
 public:
-  constexpr static int kStart = 1;
-  constexpr static int kEnd = 2;
-  constexpr static int kStartEnd = 3;
-  constexpr static int kNormal = 4;
+  enum State { kStart, kEnd, kStartEnd, kNormal };
 
-  Node(int type) : _type(type) {}
+public:
+  Node(State state) : _state(state) {}
 
   ~Node() {
     for (auto edge : _edges) {
@@ -98,35 +97,23 @@ public:
     }
   }
 
-  bool IsStart() {
-    return _type & 1;
+  bool IsStart() const {
+    return kStart == _state || kStartEnd == _state;
   }
 
-  bool IsEnd() {
-    return _type & 2;
+  bool IsEnd() const {
+    return kEnd == _state || kStartEnd == _state;
   }
 
-  bool IsNormal() {
-    return _type & 4;
+  bool IsNormal() const {
+    return kNormal == _state;
   }
 
-  int Type() {
-    return _type;
+  State state() const {
+    return _state;
   }
 
-  std::string TypeString() {
-    if (kStart == _type) {
-      return "start";
-    } else if (kEnd == _type) {
-      return "end";
-    } else if (kStartEnd == _type) {
-      return "start/end";
-    } else {
-      return "normal";
-    }
-  }
-
-  void SetType(int type);
+  void AttachState(State state);
 
   constexpr static int kUnsetNumber{-1};
 
@@ -143,7 +130,7 @@ public:
   }
 
   void AddEdge(Edge *edge, Node *node) {
-    edge->SetNextNode(node);
+    edge->set_next_node(node);
     _edges.push_back(edge);
   }
 
@@ -152,11 +139,12 @@ public:
   }
 
 private:
-  int _type;
+  State _state;
   int _number{kUnsetNumber};
   std::list<Edge *> _edges;
 };
 
+std::string to_string(const Node &node);
 
 /**
  * non-deterministic finite automaton
@@ -311,7 +299,7 @@ private:
 
   const std::set<int> &EpsilonClosure(Node *u);
 
-  Edge::EdgeChars GetSetEdgeChars(const std::set<int> &s);
+  Edge::CharMasks GetSetEdgeChars(const std::set<int> &s);
 
   std::set<int> GetAdjacentSet(const std::set<int> &curr_set, char c);
 
@@ -377,7 +365,7 @@ private:
 
   void BuildPartitionMap();
 
-  Edge::EdgeChars GetSetEdgeChars(const std::set<int> &s);
+  Edge::CharMasks GetSetEdgeChars(const std::set<int> &s);
 
   bool PartSetByChar(std::list<std::set<int>> &parted_curr_set,
                      const std::set<int> &curr_set, char c);
