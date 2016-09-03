@@ -72,6 +72,7 @@ string to_string(const Edge &edge) {
  * Node
  */
 void Node::AttachState(State state) {
+  // TODO: may occur bug
   if ((kStart == state_ && kEnd == state)
       || (kStart == state && kEnd == state_)) {
     state_ = kStartEnd;
@@ -232,7 +233,7 @@ void NFA::NumberNodes() {
 
 
 const char * NFA::MatchDFS(Node *curr, const char *beg, const char *end) const {
-  logger.log("{}", to_string(*curr));
+  logger.debug("{}(): {}", __func__, to_string(*curr));
 
   if (curr->IsEnd()) {
     // recurse base, arrive END state
@@ -266,6 +267,7 @@ const char * NFA::MatchDFS(Node *curr, const char *beg, const char *end) const {
 
 
 const char *NFA::Match(const char *beg, const char *end) const {
+  logger.debug("{}(): {}", __func__, beg);
   return (MatchDFS(start_, beg, end) == end) ? beg : nullptr;
 }
 
@@ -301,7 +303,7 @@ void PrintFARecur(const Node *u, vector<bool> &visit) {
 
 /*----------------------------------------------------------------------------*/
 
-size_t NumberSet::Hasher::operator()(NumberSet &num_set) const {
+size_t NumberSet::Hasher::operator()(const NumberSet &num_set) const {
   size_t value = 0;
   for (int num : num_set.set()) {
     value |= num % sizeof(size_t);
@@ -348,8 +350,8 @@ void DFAConverter::ConversionPreamble() {
 }
 
 
-const set<int> &DFAConverter::EpsilonClosure(const Node *u) {
-  set<int> &s = e_closures_[u->number()];
+const NumberSet & DFAConverter::EpsilonClosure(const Node *u) {
+  NumberSet &s = e_closures_[u->number()];
   if (!s.empty()) {
     return s;
   }
@@ -360,9 +362,9 @@ const set<int> &DFAConverter::EpsilonClosure(const Node *u) {
     if (edge->IsEpsilon()) {
       Node *v = edge->next_node();
 
-      if (s.end() == s.find(v->number())) {
+      if (!s.contains(v->number())) {
         auto v_s = EpsilonClosure(v);
-        s.insert(v_s.begin(), v_s.end());
+        s.insert(v_s);
       }
     }
   }
@@ -370,9 +372,9 @@ const set<int> &DFAConverter::EpsilonClosure(const Node *u) {
 }
 
 
-Edge::CharMasks DFAConverter::GetEdgeCharMasks(const set<int> &s) {
+Edge::CharMasks DFAConverter::GetEdgeCharMasks(const NumberSet &num_set) {
   Edge::CharMasks char_masks;
-  for (int num : s) {
+  for (int num : num_set) {
     for (Edge *edge : GetNode(num)->edges()) {
       char_masks |= edge->char_masks();
     }
@@ -381,13 +383,13 @@ Edge::CharMasks DFAConverter::GetEdgeCharMasks(const set<int> &s) {
 }
 
 
-set<int> DFAConverter::GetAdjacentSet(const std::set<int> &curr_set, char c) {
-  set<int> adjacent_set;
+NumberSet DFAConverter::GetAdjacentSet(const NumberSet &curr_set, char c) {
+  NumberSet adjacent_set;
   for (int num : curr_set) {
     for (Edge *edge : GetNode(num)->edges()) {
       if (edge->test(c)) {
-        const set<int> &e_closure = EpsilonClosure(edge->next_node());
-        adjacent_set.insert(e_closure.begin(), e_closure.end());
+        auto e_closure = EpsilonClosure(edge->next_node());
+        adjacent_set.insert(e_closure);
       }
     }
   }
@@ -399,23 +401,23 @@ void DFAConverter::ConstructDFADiagram() {
   auto start_dfa_node = new Node(Node::kStart);
   dfa_->start_ = start_dfa_node;
 
-  set<int> start_set = EpsilonClosure(nfa_->start());
+  NumberSet start_set = EpsilonClosure(nfa_->start());
   set_to_dfa_node_.insert({start_set, start_dfa_node});
 
-  std::queue<set<int>> q;
+  std::queue<NumberSet> q;
   q.push(start_set);
 
   while (!q.empty()) {
-    set<int> &curr_set = q.front();
+    NumberSet curr_set = q.front();
     Node *dfa_curr = set_to_dfa_node_[curr_set];
 
-    logger.log("current set {}", to_string(curr_set));
+    logger.debug("current set {}", to_string(curr_set));
 
     Edge::CharMasks chars = GetEdgeCharMasks(curr_set);
     for (char c = 0; c < CHAR_MAX; ++c) {
       if (chars.test(c)) {
 
-        set<int> adjacent_set = GetAdjacentSet(curr_set, c);
+        NumberSet adjacent_set = GetAdjacentSet(curr_set, c);
 
         auto iter = set_to_dfa_node_.find(adjacent_set);
         if (set_to_dfa_node_.end() == iter) {
@@ -425,7 +427,7 @@ void DFAConverter::ConstructDFADiagram() {
         }
         Node *dfa_adjacent = iter->second;
 
-        logger.log("char {}: adjacent set {}, node: {}", c,
+        logger.debug("char {}: adjacent set {}, node: {}", c,
                    to_string(adjacent_set), dfa_adjacent);
 
         dfa_curr->AddEdge(Edge::CreateFromChar(c), dfa_adjacent);
@@ -438,14 +440,12 @@ void DFAConverter::ConstructDFADiagram() {
 
 
 void DFAConverter::CollectNodes() {
+  // collect END nodes
   for (auto p : set_to_dfa_node_) {
-    const set<int> &s = p.first;
+    NumberSet num_set = p.first;
     Node *dfa_node = p.second;
 
-    dfa_node->set_number(dfa_->nodes_.size());
-    dfa_->nodes_.push_back(dfa_node);
-
-    for (int num : s) {
+    for (int num : num_set) {
       if (GetNode(num)->IsEnd()) {
         if (!dfa_node->IsEnd()) {
           dfa_->ends_.push_back(dfa_node);
@@ -453,6 +453,13 @@ void DFAConverter::CollectNodes() {
         dfa_node->AttachState(Node::kEnd);
       }
     }
+  }
+
+  // collect all nodes and number them
+  for (auto p : set_to_dfa_node_) {
+    Node *dfa_node = p.second;
+    dfa_node->set_number(dfa_->nodes_.size());
+    dfa_->nodes_.push_back(dfa_node);
   }
 }
 

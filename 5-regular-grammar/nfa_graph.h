@@ -10,9 +10,8 @@
 #include <climits>
 #include <cassert>
 
-#include <memory>
 #include <iostream>
-#include <functional>
+#include <memory>
 #include <string>
 #include <bitset>
 #include <vector>
@@ -126,7 +125,7 @@ public:
     number_ = number;
   }
 
-  const std::list<Edge *>& edges() const {
+  const std::list<Edge *> &edges() const {
     return edges_;
   }
 
@@ -319,11 +318,37 @@ inline void PrintFA(const Node *start, int max_number) {
 class NumberSet {
 public:
   struct Hasher {
-    size_t operator()(NumberSet &num_set) const;
+    size_t operator()(const NumberSet &num_set) const;
   };
+
+  NumberSet() : pset_(std::make_shared<std::set<int>>()) {}
 
   const std::set<int> &set() const {
     return *pset_;
+  }
+
+  std::set<int>::const_iterator begin() const {
+    return pset_->begin();
+  }
+
+  std::set<int>::const_iterator end() const {
+    return pset_->end();
+  }
+
+  bool empty() const {
+    return pset_->empty();
+  }
+
+  bool contains(int num) const {
+    return pset_->end() != pset_->find(num);
+  }
+
+  bool insert(int num) {
+    return pset_->insert(num).second;
+  }
+
+  void insert(const NumberSet &num_set) {
+    pset_->insert(num_set.begin(), num_set.end());
   }
 
 private:
@@ -352,17 +377,17 @@ private:
     size_t operator()(const std::set<int> &s) const;
   };
 
-  const Node* GetNode(int number) const {
+  const Node *GetNode(int number) const {
     return nfa_->GetNode(number);
   }
 
   void ConversionPreamble();
 
-  const std::set<int> &EpsilonClosure(const Node *u);
+  const NumberSet &EpsilonClosure(const Node *u);
 
-  Edge::CharMasks GetEdgeCharMasks(const std::set<int> &s);
+  Edge::CharMasks GetEdgeCharMasks(const NumberSet &num_set);
 
-  std::set<int> GetAdjacentSet(const std::set<int> &curr_set, char c);
+  NumberSet GetAdjacentSet(const NumberSet &curr_set, char c);
 
   void ConstructDFADiagram();
 
@@ -371,8 +396,8 @@ private:
   DFA *Convert();
 
 private:
-  std::unordered_map<std::set<int>, Node *, SetHash> set_to_dfa_node_;
-  std::vector<std::set<int>> e_closures_;
+  std::unordered_map<NumberSet, Node *, NumberSet::Hasher> set_to_dfa_node_;
+  std::vector<NumberSet> e_closures_;
   NFA *nfa_;
   DFA *dfa_;
 };

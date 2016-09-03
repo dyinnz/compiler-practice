@@ -118,19 +118,12 @@ bool TEST_Number() {
 
 bool TEST_Convert() {
   cout << __func__ << endl;
-
-  {
-    NFA *nfa = LogicalOr(KleenStar(NFAComponent::CreateFromString("a")),
-                         Concatenate(NFAComponent::CreateFromString("a"),
-                                     LeastOne(NFAComponent::CreateFromString(
-                                         "b"))))->BuildNFA();
-    PrintFA(nfa->start(), nfa->size());
-  }
-
   NFA *nfa = LogicalOr(KleenStar(NFAComponent::CreateFromString("a")),
                        Concatenate(NFAComponent::CreateFromString("a"),
-                                   LeastOne(NFAComponent::CreateFromString(
-                                       "b"))))->BuildNFA();
+                                   LeastOne(
+                                       NFAComponent::CreateFromString("b"))))
+      ->BuildNFA();
+
   DFA *dfa = DFA::ConvertFromNFA(nfa);
   logger.debug("dfa size: {}", dfa->size());
   PrintFA(dfa->start(), dfa->size());
