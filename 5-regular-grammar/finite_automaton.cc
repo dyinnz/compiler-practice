@@ -361,6 +361,64 @@ string to_string(const set<int> &num_set) {
   return str;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * class DFA
+ */
+
+DFA *DFA::ConvertFromNFA(NFA *nfa) {
+  return DFAConverter::ConvertFromNFA(nfa);
+}
+
+
+void DFA::NumberNode() {
+  for (size_t i = 0; i < nodes_.size(); ++i) {
+    nodes_[i]->set_number(i);
+  }
+}
+
+
+const char *DFA::Match(const char *beg, const char *end) const {
+  const char *s = beg;
+  const DFANode *curr_node = start_;
+
+  logger.debug("{}", to_string(*curr_node));
+  while (s != end) {
+    const DFANode *next_node = curr_node->GetNextNode(*s);
+
+    if (next_node) {
+      curr_node = next_node;
+      s+= 1;
+      logger.debug("{}", to_string(*curr_node));
+
+    } else {
+      return nullptr;
+    }
+  }
+
+  return curr_node->IsEnd() ? s : nullptr;
+}
+
+
+const char *DFA::Search(const char *begin, const char *end) const {
+  // TODO
+  return nullptr;
+}
+
+
+// for debug
+void PrintDFARecur(const DFANode *u, std::vector<bool> &visit) {
+  visit[u->number()] = true;
+
+  for (auto p : u->edges()) {
+    DFANode *v = p.second;
+    logger.debug("{}--{}--{}", to_string(*u), p.first, to_string(*v));
+
+    if (!visit[v->number()]) {
+      PrintDFARecur(v, visit);
+    }
+  }
+}
 
 /*----------------------------------------------------------------------------*/
 /**
