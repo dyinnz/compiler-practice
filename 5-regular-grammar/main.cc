@@ -18,7 +18,7 @@ BaseLogger logger;
 bool TEST_SimpleNFA() {
   cout << __func__ << endl;
   string s{"a"};
-  NFA *nfa = NFA::CreateFromString("a");
+  NFA *nfa = NFAComponent::CreateFromString("a")->BuildNFA();
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
   } else {
@@ -29,9 +29,9 @@ bool TEST_SimpleNFA() {
 bool TEST_Concatenate() {
   cout << __func__ << endl;
   string s{"abc"};
-  NFA *nfa = Concatenate(NFA::CreateFromString("a"),
-                         NFA::CreateFromString("b"),
-                         NFA::CreateFromString("c"));
+  NFA *nfa = Concatenate(NFAComponent::CreateFromString("a"),
+                         NFAComponent::CreateFromString("b"),
+                         NFAComponent::CreateFromString("c"))->BuildNFA();
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
   } else {
@@ -42,11 +42,10 @@ bool TEST_Concatenate() {
 bool TEST_LogicalOr() {
   cout << __func__ << endl;
   string s{"y"};
-  NFA *nfa = LogicalOr(NFA::CreateFromString("x"),
-                       NFA::CreateFromString("y"),
-                       NFA::CreateFromString("z"));
-  vector<Node *> nodes = RecordNFA(nfa);
-  PrintFA(nfa->start(), nodes.size());
+  NFA *nfa = LogicalOr(NFAComponent::CreateFromString("x"),
+                       NFAComponent::CreateFromString("y"),
+                       NFAComponent::CreateFromString("z"))->BuildNFA();
+  PrintFA(nfa->start(), nfa->size());
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
   } else {
@@ -57,7 +56,7 @@ bool TEST_LogicalOr() {
 bool TEST_KleenStar() {
   cout << __func__ << endl;
   string s{"aaa"};
-  NFA *nfa = KleenStar(NFA::CreateFromString("a"));
+  NFA *nfa = KleenStar(NFAComponent::CreateFromString("a"))->BuildNFA();
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
   } else {
@@ -68,7 +67,7 @@ bool TEST_KleenStar() {
 bool TEST_Optional() {
   cout << __func__ << endl;
   string s{"aa"};
-  NFA *nfa = Optional(NFA::CreateFromString("a"));
+  NFA *nfa = Optional(NFAComponent::CreateFromString("a"))->BuildNFA();
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
   } else {
@@ -79,7 +78,7 @@ bool TEST_Optional() {
 bool TEST_LeastOne() {
   cout << __func__ << endl;
   string s{"aaa"};
-  NFA *nfa = LeastOne(NFA::CreateFromString("a"));
+  NFA *nfa = LeastOne(NFAComponent::CreateFromString("a"))->BuildNFA();
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
   } else {
@@ -90,10 +89,10 @@ bool TEST_LeastOne() {
 bool TEST_Combination() {
   cout << __func__ << endl;
   string s{"abaa"};
-  NFA *nfa = KleenStar(LogicalOr(NFA::CreateFromString("a"),
-                                 NFA::CreateFromString("b")));
-  vector<Node *> nodes = RecordNFA(nfa);
-  PrintFA(nfa->start(), nodes.size());
+  NFA *nfa = KleenStar(LogicalOr(NFAComponent::CreateFromString("a"),
+                                 NFAComponent::CreateFromString(
+                                     "b")))->BuildNFA();
+  PrintFA(nfa->start(), nfa->size());
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
   } else {
@@ -104,11 +103,11 @@ bool TEST_Combination() {
 bool TEST_Number() {
   cout << __func__ << endl;
   string s{"aaab"};
-  NFA *nfa = LogicalOr(KleenStar(NFA::CreateFromString("a")),
-                       Concatenate(NFA::CreateFromString("a"),
-                                   LeastOne(NFA::CreateFromString("b"))));
-  vector<Node *> nodes = RecordNFA(nfa);
-  PrintFA(nfa->start(), nodes.size());
+  NFA *nfa = LogicalOr(KleenStar(NFAComponent::CreateFromString("a")),
+                       Concatenate(NFAComponent::CreateFromString("a"),
+                                   LeastOne(NFAComponent::CreateFromString(
+                                       "b"))))->BuildNFA();
+  PrintFA(nfa->start(), nfa->size());
 
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
@@ -121,16 +120,17 @@ bool TEST_Convert() {
   cout << __func__ << endl;
 
   {
-    NFA *nfa = LogicalOr(KleenStar(NFA::CreateFromString("a")),
-                         Concatenate(NFA::CreateFromString("a"),
-                                     LeastOne(NFA::CreateFromString("b"))));
-    vector<Node *> nfa_nodes = RecordNFA(nfa);
-    PrintFA(nfa->start(), nfa_nodes.size());
+    NFA *nfa = LogicalOr(KleenStar(NFAComponent::CreateFromString("a")),
+                         Concatenate(NFAComponent::CreateFromString("a"),
+                                     LeastOne(NFAComponent::CreateFromString(
+                                         "b"))))->BuildNFA();
+    PrintFA(nfa->start(), nfa->size());
   }
 
-  NFA *nfa = LogicalOr(KleenStar(NFA::CreateFromString("a")),
-                       Concatenate(NFA::CreateFromString("a"),
-                                   LeastOne(NFA::CreateFromString("b"))));
+  NFA *nfa = LogicalOr(KleenStar(NFAComponent::CreateFromString("a")),
+                       Concatenate(NFAComponent::CreateFromString("a"),
+                                   LeastOne(NFAComponent::CreateFromString(
+                                       "b"))))->BuildNFA();
   DFA *dfa = DFA::ConvertFromNFA(nfa);
   logger.debug("dfa size: {}", dfa->size());
   PrintFA(dfa->start(), dfa->size());
@@ -147,15 +147,14 @@ bool TEST_Convert() {
 bool TEST_MinimizeDFA() {
   cout << __func__ << endl;
 
-  NFA *nfa = LogicalOr(NFA::CreateFromString("a"),
+  NFA *nfa = LogicalOr(NFAComponent::CreateFromString("a"),
                        Concatenate(
-                           LeastOne(Concatenate(NFA::CreateFromString("x"),
-                                                NFA::CreateFromString("x"))),
-                           NFA::CreateFromString("a")));
-  vector<Node *> nfa_nodes = RecordNFA(nfa);
-  PrintFA(nfa->start(), nfa_nodes.size());
-  ClearNFARecordRecur(nfa_nodes);
-
+                           LeastOne(
+                               Concatenate(NFAComponent::CreateFromString("x"),
+                                           NFAComponent::CreateFromString(
+                                               "x"))),
+                           NFAComponent::CreateFromString("a")))->BuildNFA();
+  PrintFA(nfa->start(), nfa->size());
 
   DFA *dfa = DFA::ConvertFromNFA(nfa);
   PrintFA(dfa->start(), dfa->size());

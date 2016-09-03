@@ -46,71 +46,72 @@ public:
 
   static Edge *Merge(Edge *lhs, Edge *rhs);
 
-  friend std::string to_string(const Edge &edge);
-
 public:
   Node *next_node() {
-    return _next_node;
+    return next_node_;
   }
 
   void set_next_node(Node *v) {
-    _next_node = v;
+    next_node_ = v;
   }
 
   bool IsEpsilon() const {
-    return _char_masks.none();
+    return char_masks_.none();
   }
 
   bool test(char c) const {
-    return _char_masks.test(c);
+    return char_masks_.test(c);
   }
 
-  const CharMasks& char_masks() const {
-    return _char_masks;
+  const CharMasks &char_masks() const {
+    return char_masks_;
   }
 
 
 private:
   void set(char c) {
-    _char_masks.set(c);
+    char_masks_.set(c);
   }
 
 private:
-  CharMasks _char_masks;
-  Node *_next_node{nullptr};
+  CharMasks char_masks_;
+  Node *next_node_{nullptr};
 };
 
+std::string to_string(const Edge &edge);
 
 /**
  *  Transition Diagram Node
  */
 class Node {
 public:
-  enum State { kStart, kEnd, kStartEnd, kNormal };
+  enum State {
+    kStart, kEnd, kStartEnd, kNormal
+  };
 
 public:
-  Node(State state) : _state(state) {}
+  Node(State state) : state_(state) {}
 
   ~Node() {
-    for (auto edge : _edges) {
+    for (auto edge : edges_) {
       delete edge;
     }
   }
 
   bool IsStart() const {
-    return kStart == _state || kStartEnd == _state;
+    return kStart == state_ || kStartEnd == state_;
   }
 
   bool IsEnd() const {
-    return kEnd == _state || kStartEnd == _state;
+    return kEnd == state_ || kStartEnd == state_;
   }
 
   bool IsNormal() const {
-    return kNormal == _state;
+    return kNormal == state_;
   }
 
   State state() const {
-    return _state;
+    return state_;
   }
 
   void AttachState(State state);
@@ -118,30 +119,30 @@ public:
   constexpr static int kUnsetNumber{-1};
 
   int number() const {
-    return _number;
+    return number_;
   }
 
   void set_number(int number) {
-    _number = number;
+    number_ = number;
   }
 
-  std::list<Edge *> edges() {
-    return _edges;
+  const std::list<Edge *>& edges() const {
+    return edges_;
   }
 
   void AddEdge(Edge *edge, Node *node) {
     edge->set_next_node(node);
-    _edges.push_back(edge);
+    edges_.push_back(edge);
   }
 
   void FetchEdges(Node *other) {
-    _edges.splice(_edges.end(), other->_edges);
+    edges_.splice(edges_.end(), other->edges_);
   }
 
 private:
-  State _state;
-  int _number{kUnsetNumber};
-  std::list<Edge *> _edges;
+  State state_;
+  int number_{kUnsetNumber};
+  std::list<Edge *> edges_;
 };
 
 std::string to_string(const Node &node);
@@ -149,35 +150,34 @@ std::string to_string(const Node &node);
 /**
  * non-deterministic finite automaton
  */
-class NFA {
-public:
-  static NFA *CreateFromEdge(Edge *e);
 
-  static NFA *CreateFromString(const std::string &s);
+class NFA;
+
+class NFAComponent {
+public:
+  static NFAComponent *CreateFromEdge(Edge *e);
+
+  static NFAComponent *CreateFromString(const std::string &s);
 
 public:
-  NFA(Node *start, Edge *e, Node *end) : _start(start), _end(end) {
-    _start->AddEdge(e, _end);
-    _nodes.insert(start);
-    _nodes.insert(end);
+  NFAComponent(Node *start, Edge *e, Node *end) : start_(start), end_(end) {
+    start_->AddEdge(e, end_);
+    nodes_manager_.insert(start);
+    nodes_manager_.insert(end);
   }
 
-  ~NFA() {
-    for (auto node : _nodes) {
+  ~NFAComponent() {
+    for (auto node : nodes_manager_) {
       delete node;
     }
   }
 
-  const char *Match(const char *beg, const char *end);
-
-  const char *Search(const char *begin, const char *end);
-
   Node *start() {
-    return _start;
+    return start_;
   }
 
   Node *end() {
-    return _end;
+    return end_;
   }
 
   Node *SetNewStart(Node *start);
@@ -188,20 +188,18 @@ public:
 
   Node *RemoveEnd();
 
-  void FetchNodes(NFA *nfa) {
-    _nodes.insert(nfa->_nodes.begin(), nfa->_nodes.end());
-    nfa->_nodes.clear();
+  void FetchNodes(NFAComponent *nfa) {
+    nodes_manager_.insert(nfa->nodes_manager_.begin(),
+                          nfa->nodes_manager_.end());
+    nfa->nodes_manager_.clear();
   }
 
-private:
-  const char *MatchDFS(Node *curr, const char *beg, const char *end);
-
-  const char *SearchDFS(Node *curr, const char *beg, const char *end);
+  NFA *BuildNFA();
 
 private:
-  Node *_start{nullptr};
-  Node *_end{nullptr};
-  std::unordered_set<Node *> _nodes;
+  Node *start_{nullptr};
+  Node *end_{nullptr};
+  std::unordered_set<Node *> nodes_manager_;
 };
 
 
@@ -209,73 +207,134 @@ private:
  * compose functions
  */
 
-NFA *DoConcatenate(NFA *lhs, NFA *rhs);
+NFAComponent *DoConcatenate(NFAComponent *lhs, NFAComponent *rhs);
 
-inline NFA *Concatenate(NFA *lhs, NFA *rhs) {
+inline NFAComponent *Concatenate(NFAComponent *lhs, NFAComponent *rhs) {
   return DoConcatenate(lhs, rhs);
 }
 
 template<class ...A>
-NFA *Concatenate(NFA *first, A... rest) {
+NFAComponent *Concatenate(NFAComponent *first, A... rest) {
   if (0 == sizeof...(rest)) {
     return first;
   } else {
-    NFA *rest_result = Concatenate(rest...);
+    NFAComponent *rest_result = Concatenate(rest...);
     return Concatenate(first, rest_result);
   }
 }
 
 
-NFA *DoLogicalOr(NFA *lhs, NFA *rhs);
+NFAComponent *DoLogicalOr(NFAComponent *lhs, NFAComponent *rhs);
 
-inline NFA *LogicalOr(NFA *lhs, NFA *rhs) {
+inline NFAComponent *LogicalOr(NFAComponent *lhs, NFAComponent *rhs) {
   return DoLogicalOr(lhs, rhs);
 }
 
 template<class ...A>
-NFA *LogicalOr(NFA *first, A... rest) {
+NFAComponent *LogicalOr(NFAComponent *first, A... rest) {
   if (0 == sizeof...(rest)) {
     return first;
   } else {
-    NFA *rest_result = LogicalOr(rest...);
+    NFAComponent *rest_result = LogicalOr(rest...);
     return LogicalOr(first, rest_result);
   }
 }
 
 
-NFA *KleenStar(NFA *nfa);
+NFAComponent *KleenStar(NFAComponent *nfa);
 
-NFA *Optional(NFA *nfa);
+NFAComponent *Optional(NFAComponent *nfa);
 
-NFA *LeastOne(NFA *nfa);
+NFAComponent *LeastOne(NFAComponent *nfa);
+
+
+/**
+ * class NFA
+ */
+class NFA {
+public:
+  NFA(Node *start, Node *end, const std::unordered_set<Node *> &nodes_manager)
+      : start_(start), end_(end),
+        nodes_(nodes_manager.begin(), nodes_manager.end()) {
+    NumberNodes();
+  }
+
+  ~NFA() {
+    delete start_;
+    delete end_;
+    for (auto node : nodes_) {
+      delete node;
+    }
+  }
+
+  const char *Match(const char *beg, const char *end) const;
+
+  const char *Search(const char *begin, const char *end) const;
+
+  const Node *start() const {
+    return start_;
+  }
+
+  const Node *end() const {
+    return end_;
+  }
+
+  size_t size() const {
+    return nodes_.size();
+  }
+
+  const Node *GetNode(size_t number) const {
+    return nodes_[number];
+  }
+
+private:
+  void NumberNodes();
+
+  const char *MatchDFS(Node *curr, const char *beg, const char *end) const;
+
+  const char *SearchDFS(Node *curr, const char *beg, const char *end) const;
+
+private:
+  Node *start_{nullptr};
+  Node *end_{nullptr};
+  std::vector<Node *> nodes_;
+};
 
 
 /**
  *  deterministric finite automaton
  */
 
-void RecordNFARecur(std::vector<Node *> &nodes, Node *u);
+void PrintFARecur(const Node *u, std::vector<bool> &visit);
 
-inline std::vector<Node *> RecordNFA(NFA *nfa) {
-  std::vector<Node *> nodes;
-  RecordNFARecur(nodes, nfa->start());
-  return nodes;
-}
-
-
-inline void ClearNFARecordRecur(std::vector<Node *> &nodes) {
-  for (Node *node : nodes) {
-    node->set_number(Node::kUnsetNumber);
-  }
-}
-
-
-void PrintFARecur(Node *u, std::vector<bool> &visit);
-
-inline void PrintFA(Node *start, int max_number) {
+inline void PrintFA(const Node *start, int max_number) {
   std::vector<bool> visit(max_number);
   PrintFARecur(start, visit);
 }
+
+
+/**
+ * class NumberSet
+ */
+class NumberSet {
+public:
+  struct Hasher {
+    size_t operator()(NumberSet &num_set) const;
+  };
+
+  const std::set<int> &set() const {
+    return *pset_;
+  }
+
+private:
+  std::shared_ptr<std::set<int>> pset_;
+};
+
+inline bool operator==(const NumberSet &lhs, const NumberSet &rhs) {
+  return lhs.set() == rhs.set();
+}
+
+std::string to_string(const NumberSet &num_set);
 
 /**
  * DFA converter
@@ -287,19 +346,21 @@ public:
   static DFA *ConvertFromNFA(NFA *nfa);
 
 private:
-  DFAConverter(NFA *nfa) : _nfa(nfa) {}
+  DFAConverter(NFA *nfa) : nfa_(nfa) {}
 
   struct SetHash {
     size_t operator()(const std::set<int> &s) const;
   };
 
+  const Node* GetNode(int number) const {
+    return nfa_->GetNode(number);
+  }
+
   void ConversionPreamble();
 
-  void EpsilonClosureRecur(std::set<int> &s, Node *u);
+  const std::set<int> &EpsilonClosure(const Node *u);
 
-  const std::set<int> &EpsilonClosure(Node *u);
-
-  Edge::CharMasks GetSetEdgeChars(const std::set<int> &s);
+  Edge::CharMasks GetEdgeCharMasks(const std::set<int> &s);
 
   std::set<int> GetAdjacentSet(const std::set<int> &curr_set, char c);
 
@@ -310,11 +371,10 @@ private:
   DFA *Convert();
 
 private:
-  std::unordered_map<std::set<int>, Node *, SetHash> _set_to_dfa_node;
-  std::vector<std::set<int>> _e_closures;
-  std::vector<Node *> _nfa_nodes;
-  NFA *_nfa;
-  DFA *_dfa;
+  std::unordered_map<std::set<int>, Node *, SetHash> set_to_dfa_node_;
+  std::vector<std::set<int>> e_closures_;
+  NFA *nfa_;
+  DFA *dfa_;
 };
 
 
@@ -331,11 +391,11 @@ public:
 
 public:
   size_t size() {
-    return _nodes.size();
+    return nodes_.size();
   }
 
   Node *start() {
-    return _start;
+    return start_;
   }
 
   const char *Match(const char *beg, const char *end);
@@ -343,9 +403,9 @@ public:
   const char *Search(const char *begin, const char *end);
 
 private:
-  Node *_start{nullptr};
-  std::vector<Node *> _nodes;
-  std::vector<Node *> _ends;
+  Node *start_{nullptr};
+  std::vector<Node *> nodes_;
+  std::vector<Node *> ends_;
 };
 
 
@@ -357,15 +417,15 @@ public:
   static DFA *Minimize(DFA *normal);
 
 private:
-  DFAOptimizer(DFA *normal) : _normal(normal), _normal_nodes(_normal->_nodes) {
-    _partition_map.resize(_normal_nodes.size());
+  DFAOptimizer(DFA *normal) : normal_(normal), normal_nodes_(normal_->nodes_) {
+    partition_map_.resize(normal_nodes_.size());
   }
 
   void InitPartition();
 
   void BuildPartitionMap();
 
-  Edge::CharMasks GetSetEdgeChars(const std::set<int> &s);
+  Edge::CharMasks GetSetCharMasks(const std::set<int> &s);
 
   bool PartSetByChar(std::list<std::set<int>> &parted_curr_set,
                      const std::set<int> &curr_set, char c);
@@ -377,11 +437,11 @@ private:
   DFA *Minimize();
 
 private:
-  DFA *_minimum{nullptr};
-  DFA *_normal{nullptr};
-  std::vector<Node *> _normal_nodes;
-  std::list<std::set<int>> _partition;
-  std::vector<std::set<int> *> _partition_map;
+  DFA *minimum_{nullptr};
+  DFA *normal_{nullptr};
+  std::vector<Node *> normal_nodes_;
+  std::list<std::set<int>> partition_;
+  std::vector<std::set<int> *> partition_map_;
 };
 
 
