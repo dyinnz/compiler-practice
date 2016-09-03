@@ -7,7 +7,7 @@
 
 #include <iostream>
 #include "simplelogger.h"
-#include "nfa_graph.h"
+#include "finite_automaton.h"
 
 using namespace std;
 using namespace simple_logger;
@@ -45,7 +45,7 @@ bool TEST_LogicalOr() {
   NFA *nfa = LogicalOr(NFAComponent::CreateFromString("x"),
                        NFAComponent::CreateFromString("y"),
                        NFAComponent::CreateFromString("z"))->BuildNFA();
-  PrintFA(nfa->start(), nfa->size());
+  PrintNFA(nfa->start(), nfa->size());
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
   } else {
@@ -92,7 +92,7 @@ bool TEST_Combination() {
   NFA *nfa = KleenStar(LogicalOr(NFAComponent::CreateFromString("a"),
                                  NFAComponent::CreateFromString(
                                      "b")))->BuildNFA();
-  PrintFA(nfa->start(), nfa->size());
+  PrintNFA(nfa->start(), nfa->size());
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
   } else {
@@ -107,7 +107,7 @@ bool TEST_Number() {
                        Concatenate(NFAComponent::CreateFromString("a"),
                                    LeastOne(NFAComponent::CreateFromString(
                                        "b"))))->BuildNFA();
-  PrintFA(nfa->start(), nfa->size());
+  PrintNFA(nfa->start(), nfa->size());
 
   if (nfa->Match(s.c_str(), s.c_str() + s.length())) {
     return true;
@@ -126,7 +126,7 @@ bool TEST_Convert() {
 
   DFA *dfa = DFA::ConvertFromNFA(nfa);
   logger.debug("dfa size: {}", dfa->size());
-  PrintFA(dfa->start(), dfa->size());
+  PrintDFA(dfa->start(), dfa->size());
 
   string s{"abbb"};
 
@@ -147,13 +147,13 @@ bool TEST_MinimizeDFA() {
                                            NFAComponent::CreateFromString(
                                                "x"))),
                            NFAComponent::CreateFromString("a")))->BuildNFA();
-  PrintFA(nfa->start(), nfa->size());
+  PrintNFA(nfa->start(), nfa->size());
 
   DFA *dfa = DFA::ConvertFromNFA(nfa);
-  PrintFA(dfa->start(), dfa->size());
+  PrintDFA(dfa->start(), dfa->size());
 
   DFA *minimum_dfa = DFAOptimizer::Minimize(dfa);
-  PrintFA(minimum_dfa->start(), minimum_dfa->size());
+  PrintDFA(minimum_dfa->start(), minimum_dfa->size());
 
   string s{"xxxxxxa"};
 

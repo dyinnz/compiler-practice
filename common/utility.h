@@ -12,26 +12,30 @@
 /**
  * Scope Guarder
  */
-template <class T>
+template<class T>
 class ScopeGuarder {
 public:
   ScopeGuarder(T &&guard) : _guard(std::move(guard)) {}
-  ~ScopeGuarder() { _guard();  }
 
-  ScopeGuarder(ScopeGuarder&&) = default;
+  ~ScopeGuarder() { _guard(); }
+
+  ScopeGuarder(ScopeGuarder &&) = default;
 
 private:
-  ScopeGuarder& operator=(ScopeGuarder&&) = delete;
-  ScopeGuarder& operator=(const ScopeGuarder&) = delete;
-  ScopeGuarder(const ScopeGuarder&) = delete;
+  ScopeGuarder &operator=(ScopeGuarder &&) = delete;
+
+  ScopeGuarder &operator=(const ScopeGuarder &) = delete;
+
+  ScopeGuarder(const ScopeGuarder &) = delete;
 
   T _guard;
 };
 
-class ScopeGuarderEmptyType {};
+class ScopeGuarderEmptyType {
+};
 
-template <class T>
-inline ScopeGuarder<T> operator+(ScopeGuarderEmptyType , T &&guard) {
+template<class T>
+inline ScopeGuarder<T> operator+(ScopeGuarderEmptyType, T &&guard) {
   return ScopeGuarder<T>(std::move(guard));
 }
 
@@ -46,7 +50,7 @@ template<class C, class F>
 class FilterWrapper {
 public:
   FilterWrapper(C container, F filter) : _container(container),
-                                          _filter(filter) {}
+                                         _filter(filter) {}
 
   class FilterIterator {
   public:

@@ -5,39 +5,42 @@
  * Date:   2016-08-25
  ******************************************************************************/
 
-#include <algorithm>
 #include <iostream>
+#include <algorithm>
 #include <queue>
+
 #include "simplelogger.h"
-#include "nfa_graph.h"
+#include "finite_automaton.h"
 
 using std::vector;
 using std::string;
+using std::list;
 using std::set;
 using std::pair;
-using std::list;
 using std::unordered_map;
+using std::unordered_set;
 using std::move;
 using std::cout;
 using std::endl;
 
 extern simple_logger::BaseLogger logger;
 
-namespace finite_automaton {
-
 /*----------------------------------------------------------------------------*/
 
+namespace finite_automaton {
+
 /**
- * class Edge
+ * class NFAEdge
  */
-Edge *Edge::CreateFromChar(char c) {
-  auto edge = new Edge;
+
+NFAEdge *NFAEdge::CreateFromChar(char c) {
+  auto edge = new NFAEdge;
   edge->set(c);
   return edge;
 }
 
 
-Edge *Edge::CreateFromString(const std::string &s) {
+NFAEdge *NFAEdge::CreateFromString(const std::string &s) {
   if (s.empty()) {
     return CreateEpsilon();
 
@@ -50,14 +53,14 @@ Edge *Edge::CreateFromString(const std::string &s) {
 }
 
 
-Edge *Edge::Merge(Edge *lhs, Edge *rhs) {
+NFAEdge *NFAEdge::Merge(NFAEdge *lhs, NFAEdge *rhs) {
   lhs->char_masks_ |= rhs->char_masks_;
   delete rhs;
   return lhs;
 }
 
 
-string to_string(const Edge &edge) {
+string to_string(const NFAEdge &edge) {
   string s{"--"};
   for (char c = 0; c < CHAR_MAX; ++c) {
     if (edge.test(c)) s += c;
@@ -66,52 +69,73 @@ string to_string(const Edge &edge) {
   return s;
 }
 
-/*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*/
 /**
- * Node
+ * class Node
  */
+
+Node::~Node() {
+  // do nothing
+}
+
+
 void Node::AttachState(State state) {
-  // TODO: may occur bug
   if ((kStart == state_ && kEnd == state)
       || (kStart == state && kEnd == state_)) {
     state_ = kStartEnd;
+
+  } else if (kStartEnd == state_ && (kStart == state || kEnd == state)) {
+    // do nothing
   } else {
     state_ = state;
   }
 }
 
+
 string to_string(const Node &node) {
-  string s {"("};
+  string s{"("};
   s += std::to_string(node.number());
   switch (node.state()) {
-    case Node::kStart:    s += ":start)"; break;
-    case Node::kEnd:      s += ":end)"; break;
-    case Node::kStartEnd: s += ":start/end)"; break;
-    case Node::kNormal:   s += ":normal)"; break;
-    default:              s += ")"; break;
+    case Node::kStart:
+      s += ":start)";
+      break;
+    case Node::kEnd:
+      s += ":end)";
+      break;
+    case Node::kStartEnd:
+      s += ":start/end)";
+      break;
+    case Node::kNormal:
+      s += ":normal)";
+      break;
+    default:
+      s += ")";
+      break;
   }
   return s;
 }
 
-/*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*/
 /**
  * class NFA
  */
-NFAComponent *NFAComponent::CreateFromEdge(Edge *e) {
-  return new NFAComponent(new Node(Node::kStart), e, new Node(Node::kEnd));
+
+NFAComponent *NFAComponent::CreateFromEdge(NFAEdge *e) {
+  return new NFAComponent(new NFANode(Node::kStart), e,
+                          new NFANode(Node::kEnd));
 }
 
 
 NFAComponent *NFAComponent::CreateFromString(const string &s) {
-  return CreateFromEdge(Edge::CreateFromString(s));
+  return CreateFromEdge(NFAEdge::CreateFromString(s));
 }
 
 
-Node *NFAComponent::SetNewStart(Node *start) {
+NFANode *NFAComponent::SetNewStart(NFANode *start) {
   assert(start->IsStart());
-  Node *old_start = start_;
+  NFANode *old_start = start_;
   old_start->AttachState(Node::kNormal);
   start_ = start;
   nodes_manager_.insert(start_);
@@ -119,9 +143,9 @@ Node *NFAComponent::SetNewStart(Node *start) {
 }
 
 
-Node *NFAComponent::SetNewEnd(Node *end) {
+NFANode *NFAComponent::SetNewEnd(NFANode *end) {
   assert(end->IsEnd());
-  Node *old_end = end_;
+  NFANode *old_end = end_;
   old_end->AttachState(Node::kNormal);
   end_ = end;
   nodes_manager_.insert(end_);
@@ -129,23 +153,23 @@ Node *NFAComponent::SetNewEnd(Node *end) {
 }
 
 
-Node *NFAComponent::RemoveStart() {
-  Node *old_start = start_;
+NFANode *NFAComponent::RemoveStart() {
+  NFANode *old_start = start_;
   start_ = nullptr;
   nodes_manager_.erase(old_start);
   return old_start;
 }
 
 
-Node *NFAComponent::RemoveEnd() {
-  Node *old_end = end_;
+NFANode *NFAComponent::RemoveEnd() {
+  NFANode *old_end = end_;
   end_ = nullptr;
   nodes_manager_.erase(old_end);
   return old_end;
 }
 
 
-NFA* NFAComponent::BuildNFA() {
+NFA *NFAComponent::BuildNFA() {
   auto nfa = new NFA(start_, end_, nodes_manager_);
   start_ = nullptr;
   end_ = nullptr;
@@ -153,14 +177,15 @@ NFA* NFAComponent::BuildNFA() {
   return nfa;
 }
 
-/*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*/
 /**
- * Auxiliary functions
+ * Auxiliary functions for composing
  */
+
 NFAComponent *DoConcatenate(NFAComponent *lhs, NFAComponent *rhs) {
   // merge the end of lhs and the start of rhs
-  Node *rhs_start = rhs->RemoveStart();
+  NFANode *rhs_start = rhs->RemoveStart();
   lhs->end()->FetchEdges(rhs_start);
   delete rhs_start;
 
@@ -174,13 +199,13 @@ NFAComponent *DoConcatenate(NFAComponent *lhs, NFAComponent *rhs) {
 
 
 NFAComponent *DoLogicalOr(NFAComponent *lhs, NFAComponent *rhs) {
-  Node *rhs_start = rhs->RemoveStart();
+  NFANode *rhs_start = rhs->RemoveStart();
   lhs->start()->FetchEdges(rhs_start);
   delete rhs_start;
 
-  auto *new_end = new Node(Node::kEnd);
-  lhs->end()->AddEdge(Edge::CreateEpsilon(), new_end);
-  rhs->end()->AddEdge(Edge::CreateEpsilon(), new_end);
+  auto *new_end = new NFANode(Node::kEnd);
+  lhs->end()->AddEdge(NFAEdge::CreateEpsilon(), new_end);
+  rhs->end()->AddEdge(NFAEdge::CreateEpsilon(), new_end);
   lhs->SetNewEnd(new_end);
   rhs->end()->AttachState(Node::kNormal);
 
@@ -192,39 +217,40 @@ NFAComponent *DoLogicalOr(NFAComponent *lhs, NFAComponent *rhs) {
 
 
 NFAComponent *KleenStar(NFAComponent *nfa) {
-  Node *old_start = nfa->SetNewStart(new Node(Node::kStart));
-  Node *old_end = nfa->SetNewEnd(new Node(Node::kEnd));
+  NFANode *old_start = nfa->SetNewStart(new NFANode(Node::kStart));
+  NFANode *old_end = nfa->SetNewEnd(new NFANode(Node::kEnd));
 
-  old_end->AddEdge(Edge::CreateEpsilon(), old_start);
+  old_end->AddEdge(NFAEdge::CreateEpsilon(), old_start);
 
-  nfa->start()->AddEdge(Edge::CreateEpsilon(), old_start);
-  old_start->AddEdge(Edge::CreateEpsilon(), nfa->end());
+  nfa->start()->AddEdge(NFAEdge::CreateEpsilon(), old_start);
+  old_start->AddEdge(NFAEdge::CreateEpsilon(), nfa->end());
   return nfa;
 }
 
 
 NFAComponent *Optional(NFAComponent *nfa) {
-  nfa->start()->AddEdge(Edge::CreateEpsilon(), nfa->end());
+  nfa->start()->AddEdge(NFAEdge::CreateEpsilon(), nfa->end());
   return nfa;
 }
 
 
 NFAComponent *LeastOne(NFAComponent *nfa) {
-  Node *old_start = nfa->SetNewStart(new Node(Node::kStart));
-  Node *old_end = nfa->SetNewEnd(new Node(Node::kEnd));
+  NFANode *old_start = nfa->SetNewStart(new NFANode(Node::kStart));
+  NFANode *old_end = nfa->SetNewEnd(new NFANode(Node::kEnd));
 
-  nfa->start()->AddEdge(Edge::CreateEpsilon(), old_start);
-  old_end->AddEdge(Edge::CreateEpsilon(), nfa->end());
+  nfa->start()->AddEdge(NFAEdge::CreateEpsilon(), old_start);
+  old_end->AddEdge(NFAEdge::CreateEpsilon(), nfa->end());
 
-  old_end->AddEdge(Edge::CreateEpsilon(), old_start);
+  old_end->AddEdge(NFAEdge::CreateEpsilon(), old_start);
   return nfa;
 }
 
-/*----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*/
 /**
  * class NFA
  */
+
 void NFA::NumberNodes() {
   for (size_t i = 0; i < nodes_.size(); ++i) {
     nodes_[i]->set_number(i);
@@ -232,7 +258,8 @@ void NFA::NumberNodes() {
 }
 
 
-const char * NFA::MatchDFS(Node *curr, const char *beg, const char *end) const {
+const char *
+NFA::MatchDFS(NFANode *curr, const char *beg, const char *end) const {
   logger.debug("{}(): {}", __func__, to_string(*curr));
 
   if (curr->IsEnd()) {
@@ -240,7 +267,7 @@ const char * NFA::MatchDFS(Node *curr, const char *beg, const char *end) const {
     return beg;
   }
 
-  for (Edge *edge : curr->edges()) {
+  for (NFAEdge *edge : curr->edges()) {
     const char *match_pos = nullptr;
 
     if (edge->IsEpsilon()) {
@@ -272,7 +299,8 @@ const char *NFA::Match(const char *beg, const char *end) const {
 }
 
 
-const char *NFA::SearchDFS(Node *curr, const char *beg, const char *end) const {
+const char *
+NFA::SearchDFS(NFANode *curr, const char *beg, const char *end) const {
   // TODO
   return nullptr;
 }
@@ -284,24 +312,26 @@ const char *NFA::Search(const char *begin, const char *end) const {
 }
 
 
-/**
- * for debug
- */
-void PrintFARecur(const Node *u, vector<bool> &visit) {
+// for debug
+void PrintNFARecur(const NFANode *u, vector<bool> &visit) {
   visit[u->number()] = true;
 
-  for (Edge *edge : u->edges()) {
-    Node *v = edge->next_node();
+  for (NFAEdge *edge : u->edges()) {
+    NFANode *v = edge->next_node();
 
     logger.debug("{}{}{}", to_string(*u), to_string(*edge), to_string(*v));
 
     if (!visit[v->number()]) {
-      PrintFARecur(v, visit);
+      PrintNFARecur(v, visit);
     }
   }
 }
 
+
 /*----------------------------------------------------------------------------*/
+/**
+ * class NumberSet
+ */
 
 size_t NumberSet::Hasher::operator()(const NumberSet &num_set) const {
   size_t value = 0;
@@ -320,7 +350,6 @@ std::string to_string(const NumberSet &num_set) {
   return str;
 }
 
-/*----------------------------------------------------------------------------*/
 
 // for debug
 string to_string(const set<int> &num_set) {
@@ -332,17 +361,11 @@ string to_string(const set<int> &num_set) {
   return str;
 }
 
+
+/*----------------------------------------------------------------------------*/
 /**
  * class DFAConverter
  */
-size_t DFAConverter::SetHash::operator()(const std::set<int> &s) const {
-  size_t value = 0;
-  for (int num : s) {
-    value |= num % sizeof(size_t);
-  }
-  return value;
-}
-
 
 void DFAConverter::ConversionPreamble() {
   e_closures_.resize(nfa_->size());
@@ -350,7 +373,7 @@ void DFAConverter::ConversionPreamble() {
 }
 
 
-const NumberSet & DFAConverter::EpsilonClosure(const Node *u) {
+const NumberSet &DFAConverter::EpsilonClosure(const NFANode *u) {
   NumberSet &s = e_closures_[u->number()];
   if (!s.empty()) {
     return s;
@@ -358,9 +381,9 @@ const NumberSet & DFAConverter::EpsilonClosure(const Node *u) {
 
   // construct epsilon closure
   s.insert(u->number());
-  for (Edge *edge : u->edges()) {
+  for (NFAEdge *edge : u->edges()) {
     if (edge->IsEpsilon()) {
-      Node *v = edge->next_node();
+      NFANode *v = edge->next_node();
 
       if (!s.contains(v->number())) {
         auto v_s = EpsilonClosure(v);
@@ -372,10 +395,10 @@ const NumberSet & DFAConverter::EpsilonClosure(const Node *u) {
 }
 
 
-Edge::CharMasks DFAConverter::GetEdgeCharMasks(const NumberSet &num_set) {
-  Edge::CharMasks char_masks;
+NFAEdge::CharMasks DFAConverter::GetEdgeCharMasks(const NumberSet &num_set) {
+  NFAEdge::CharMasks char_masks;
   for (int num : num_set) {
-    for (Edge *edge : GetNode(num)->edges()) {
+    for (NFAEdge *edge : GetNFANode(num)->edges()) {
       char_masks |= edge->char_masks();
     }
   }
@@ -386,7 +409,7 @@ Edge::CharMasks DFAConverter::GetEdgeCharMasks(const NumberSet &num_set) {
 NumberSet DFAConverter::GetAdjacentSet(const NumberSet &curr_set, char c) {
   NumberSet adjacent_set;
   for (int num : curr_set) {
-    for (Edge *edge : GetNode(num)->edges()) {
+    for (NFAEdge *edge : GetNFANode(num)->edges()) {
       if (edge->test(c)) {
         auto e_closure = EpsilonClosure(edge->next_node());
         adjacent_set.insert(e_closure);
@@ -397,9 +420,8 @@ NumberSet DFAConverter::GetAdjacentSet(const NumberSet &curr_set, char c) {
 }
 
 
-void DFAConverter::ConstructDFADiagram() {
-  auto start_dfa_node = new Node(Node::kStart);
-  dfa_->start_ = start_dfa_node;
+DFANode *DFAConverter::ConstructDFADiagram() {
+  auto start_dfa_node = new DFANode(Node::kStart);
 
   NumberSet start_set = EpsilonClosure(nfa_->start());
   set_to_dfa_node_.insert({start_set, start_dfa_node});
@@ -409,11 +431,11 @@ void DFAConverter::ConstructDFADiagram() {
 
   while (!q.empty()) {
     NumberSet curr_set = q.front();
-    Node *dfa_curr = set_to_dfa_node_[curr_set];
+    DFANode *dfa_curr = set_to_dfa_node_[curr_set];
 
     logger.debug("current set {}", to_string(curr_set));
 
-    Edge::CharMasks chars = GetEdgeCharMasks(curr_set);
+    NFAEdge::CharMasks chars = GetEdgeCharMasks(curr_set);
     for (char c = 0; c < CHAR_MAX; ++c) {
       if (chars.test(c)) {
 
@@ -422,58 +444,65 @@ void DFAConverter::ConstructDFADiagram() {
         auto iter = set_to_dfa_node_.find(adjacent_set);
         if (set_to_dfa_node_.end() == iter) {
           iter = set_to_dfa_node_.insert(
-              {adjacent_set, new Node(Node::kNormal)}).first;
+              {adjacent_set, new DFANode(Node::kNormal)}).first;
           q.push(adjacent_set);
         }
-        Node *dfa_adjacent = iter->second;
+        DFANode *dfa_adjacent = iter->second;
 
         logger.debug("char {}: adjacent set {}, node: {}", c,
-                   to_string(adjacent_set), dfa_adjacent);
+                     to_string(adjacent_set), dfa_adjacent);
 
-        dfa_curr->AddEdge(Edge::CreateFromChar(c), dfa_adjacent);
+        dfa_curr->AddEdge(c, dfa_adjacent);
       }
     }
 
     q.pop();
   }
+
+  return start_dfa_node;
 }
 
 
-void DFAConverter::CollectNodes() {
+vector<DFANode *> DFAConverter::CollectEndNodes() {
   // collect END nodes
+  vector<DFANode *> ends;
   for (auto p : set_to_dfa_node_) {
     NumberSet num_set = p.first;
-    Node *dfa_node = p.second;
+    DFANode *dfa_node = p.second;
 
     for (int num : num_set) {
-      if (GetNode(num)->IsEnd()) {
+      if (GetNFANode(num)->IsEnd()) {
         if (!dfa_node->IsEnd()) {
-          dfa_->ends_.push_back(dfa_node);
+          ends.push_back(dfa_node);
         }
-        dfa_node->AttachState(Node::kEnd);
+        dfa_node->AttachState(DFANode::kEnd);
       }
     }
   }
+  return ends;
+}
 
+
+vector<DFANode *> DFAConverter::CollectAllNodes() {
   // collect all nodes and number them
+  vector<DFANode *> nodes;
   for (auto p : set_to_dfa_node_) {
-    Node *dfa_node = p.second;
-    dfa_node->set_number(dfa_->nodes_.size());
-    dfa_->nodes_.push_back(dfa_node);
+    nodes.push_back(p.second);
   }
+  return nodes;
 }
 
 
 DFA *DFAConverter::Convert() {
-  dfa_ = new DFA;
 
   ConversionPreamble();
 
-  ConstructDFADiagram();
+  DFANode *start = ConstructDFADiagram();
 
-  CollectNodes();
+  auto ends = CollectEndNodes();
+  auto nodes = CollectAllNodes();
 
-  return dfa_;
+  return new DFA(start, move(ends), move(nodes));
 }
 
 
@@ -481,54 +510,12 @@ DFA *DFAConverter::ConvertFromNFA(NFA *nfa) {
   return DFAConverter(nfa).Convert();
 }
 
-/*----------------------------------------------------------------------------*/
-
-/**
- *  class DFA
- */
-DFA *DFA::ConvertFromNFA(NFA *nfa) {
-  return DFAConverter::ConvertFromNFA(nfa);
-}
-
-
-const char *DFA::Match(const char *beg, const char *end) {
-  const char *s = beg;
-  Node *curr_node = start_;
-
-  auto find_next_node = [&](Node *u, char c) -> Node * {
-    for (Edge *edge : u->edges()) {
-      if (edge->test(c)) return edge->next_node();
-    }
-    return nullptr;
-  };
-
-  logger.debug("{}", to_string(*curr_node));
-
-  while (s != end) {
-    Node *next_node = find_next_node(curr_node, *s);
-    if (nullptr == next_node) {
-      return nullptr;
-    }
-
-    curr_node = next_node;
-    s += 1;
-
-    logger.debug("{}", to_string(*curr_node));
-  }
-
-  return curr_node->IsEnd() ? s : nullptr;
-}
-
-
-const char *DFA::Search(const char *begin, const char *end) {
-  return nullptr;
-}
 
 /*----------------------------------------------------------------------------*/
-
 /**
  * class DFAOptimizer
  */
+
 DFA *DFAOptimizer::Minimize(DFA *normal) {
   return DFAOptimizer(normal).Minimize();
 }
@@ -538,11 +525,11 @@ void DFAOptimizer::InitPartition() {
   partition_.emplace_back();
   partition_.emplace_back();
 
-  set<int> &start_set = partition_.front();
-  set<int> &end_set = partition_.back();
+  NumberSet &start_set = partition_.front();
+  NumberSet &end_set = partition_.back();
 
-  for (Node *node : normal_->nodes_) {
-
+  for (size_t i = 0; i < normal_->size(); ++i) {
+    const DFANode *node = normal_->GetNode(i);
     if (node->IsEnd()) {
       end_set.insert(node->number());
     } else {
@@ -557,41 +544,37 @@ void DFAOptimizer::InitPartition() {
 
 
 void DFAOptimizer::BuildPartitionMap() {
-  for (set<int> &s : partition_) {
+  for (NumberSet &s : partition_) {
     for (int num : s) {
-      partition_map_[num] = &s;
+      num_to_set_[num] = &s;
     }
   }
 }
 
-Edge::CharMasks DFAOptimizer::GetSetCharMasks(const std::set<int> &s) {
-  Edge::CharMasks char_masks;
+
+unordered_set<char> DFAOptimizer::GetSetEdgeChars(const NumberSet &s) {
+  unordered_set<char> chars;
   for (int num : s) {
-    for (Edge *edge : normal_nodes_[num]->edges()) {
-      char_masks |= edge->char_masks();
+    for (auto p : GetNormalNode(num)->edges()) {
+      chars.insert(p.first);
     }
   }
-  return char_masks;
+  return chars;
 }
 
 
-bool DFAOptimizer::PartSetByChar(list<set<int>> &parted_sets,
-                                 const set<int> &curr_set, char c) {
-  logger.log("part set: {} by {}", to_string(curr_set), c);
+bool DFAOptimizer::PartSetByChar(list<NumberSet> &parted_sets,
+                                 const NumberSet &curr_set, char c) {
+  logger.debug("part set: {} by {}", to_string(curr_set), c);
 
-  unordered_map<set<int> *, set<int>> old_to_new;
+  unordered_map<NumberSet *, NumberSet> old_to_new;
   for (int u_num : curr_set) {
+    const DFANode *u = GetNormalNode(u_num);
+    const DFANode *v = u->GetNextNode(c);
 
-    bool is_match = false;
-    for (Edge *edge : normal_nodes_[u_num]->edges()) {
-      if (edge->test(c)) {
-        int v_num = edge->next_node()->number();
-        old_to_new[partition_map_[v_num]].insert(u_num);
-        is_match = true;
-      }
-    }
-
-    if (!is_match) {
+    if (v) {
+      old_to_new[num_to_set_[v->number()]].insert(u_num);
+    } else {
       old_to_new[nullptr].insert(u_num);
     }
   }
@@ -616,32 +599,30 @@ bool DFAOptimizer::PartSetByChar(list<set<int>> &parted_sets,
 
 
 void DFAOptimizer::TryPartEachSet() {
-
   size_t last_size = 0;
-  list<set<int>> new_partition;
+  list<NumberSet> new_partition;
   do {
-    logger.log("new loop");
+    logger.debug("new loop");
 
     last_size = partition_.size();
     new_partition.clear();
 
     BuildPartitionMap();
 
-    for (set<int> &curr_set : partition_) {
+    for (NumberSet &curr_set : partition_) {
 
-      logger.log("current set: {}", to_string(curr_set));
+      logger.debug("current set: {}", to_string(curr_set));
 
-      list<set<int>> parted_sets;
-      Edge::CharMasks chars = GetSetCharMasks(curr_set);
+      auto chars = GetSetEdgeChars(curr_set);
       bool is_parted = false;
 
-      for (char c = 0; c < CHAR_MAX; ++c) {
-        if (chars.test(c)) {
-          is_parted = PartSetByChar(parted_sets, curr_set, c);
-          if (is_parted) {
-            new_partition.splice(new_partition.begin(), parted_sets);
-            break;
-          }
+      for (char c : chars) {
+        list<NumberSet> parted_sets;
+        is_parted = PartSetByChar(parted_sets, curr_set, c);
+
+        if (is_parted) {
+          new_partition.splice(new_partition.begin(), parted_sets);
+          break;
         }
       }
 
@@ -660,38 +641,46 @@ void DFAOptimizer::TryPartEachSet() {
 }
 
 
-void DFAOptimizer::ConstructFromSets() {
-  std::vector<Node *> _normal_to_min(normal_nodes_.size());
+DFA *DFAOptimizer::ConstructFromSets() {
+  std::vector<DFANode *> normal_to_min(normal_->size());
 
-  for (set<int> &s : partition_) {
-    auto *node = new Node(Node::kNormal);
-    node->set_number(minimum_->nodes_.size());
-    minimum_->nodes_.push_back(node);
+  DFANode *start{nullptr};
+  vector<DFANode *> ends;
+  vector<DFANode *> nodes;
+
+  // collect
+  for (NumberSet &s : partition_) {
+    auto *node = new DFANode(Node::kNormal);
+    nodes.push_back(node);
 
     for (int old_num : s) {
-      _normal_to_min[old_num] = node;
+      normal_to_min[old_num] = node;
 
-      if (normal_nodes_[old_num]->IsStart()) {
+      if (GetNormalNode(old_num)->IsStart()) {
         node->AttachState(Node::kStart);
-        minimum_->start_ = node;
+        start = node;
       }
-      if (normal_nodes_[old_num]->IsEnd()) {
+      if (GetNormalNode(old_num)->IsEnd()) {
         node->AttachState(Node::kEnd);
-        minimum_->ends_.push_back(node);
+        ends.push_back(node);
       }
     }
   }
 
-  for (set<int> &s : partition_) {
-    Node *u = _normal_to_min[*s.begin()];
+  // add edges
+  for (NumberSet &s : partition_) {
+    DFANode *min_u = normal_to_min[*s.begin()];
 
     for (int num : s) {
-      for (Edge *edge : normal_nodes_[num]->edges()) {
-        Node *v = _normal_to_min[edge->next_node()->number()];
-        u->AddEdge(new Edge(*edge), v);
+      for (auto p : GetNormalNode(num)->edges()) {
+        char c = p.first;
+        DFANode *min_v = normal_to_min[p.second->number()];
+        min_u->AddEdge(c, min_v);
       }
     }
   }
+
+  return new DFA(start, move(ends), move(nodes));
 }
 
 
@@ -703,13 +692,10 @@ DFA *DFAOptimizer::Minimize() {
     return normal_;
   }
 
-  minimum_ = new DFA;
-
   TryPartEachSet();
 
-  ConstructFromSets();
-
-  return minimum_;
+  DFA *minimum = ConstructFromSets();
+  return minimum;
 }
 
 
