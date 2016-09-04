@@ -23,7 +23,7 @@
 
 /*----------------------------------------------------------------------------*/
 
-namespace finite_automaton {
+namespace regular_expression {
 
 // pre-declaration
 class NFAEdge;
@@ -62,6 +62,8 @@ public:
 
   static NFAEdge *CreateFromChar(char c);
 
+  static NFAEdge *CreateFromRange(char beg, char end);
+
   static NFAEdge *CreateFromString(const std::string &s);
 
   static NFAEdge *Merge(NFAEdge *lhs, NFAEdge *rhs);
@@ -87,9 +89,22 @@ public:
     return char_masks_;
   }
 
-private:
   void set(char c) {
     char_masks_.set(c);
+  }
+
+  void flip() {
+    char_masks_.flip();
+  }
+
+  void SetAll() {
+    char_masks_.set();
+  }
+
+  void SetRange(char beg, char end) {
+    for (char c = beg; c < end; ++c) {
+      set(c);
+    }
   }
 
 private:
@@ -225,6 +240,10 @@ class NFAComponent {
 public:
   static NFAComponent *CreateFromEdge(NFAEdge *e);
 
+  static NFAComponent *CreateFromChar(char c);
+
+  static NFAComponent *CreateFromRange(char beg, char end);
+
   static NFAComponent *CreateFromString(const std::string &s);
 
 public:
@@ -294,19 +313,19 @@ NFAComponent *Concatenate(NFAComponent *first, A... rest) {
 }
 
 
-NFAComponent *DoLogicalOr(NFAComponent *lhs, NFAComponent *rhs);
+NFAComponent *DoUnion(NFAComponent *lhs, NFAComponent *rhs);
 
-inline NFAComponent *LogicalOr(NFAComponent *lhs, NFAComponent *rhs) {
-  return DoLogicalOr(lhs, rhs);
+inline NFAComponent *Union(NFAComponent *lhs, NFAComponent *rhs) {
+  return DoUnion(lhs, rhs);
 }
 
 template<class ...A>
-NFAComponent *LogicalOr(NFAComponent *first, A... rest) {
+NFAComponent *Union(NFAComponent *first, A... rest) {
   if (0 == sizeof...(rest)) {
     return first;
   } else {
-    NFAComponent *rest_result = LogicalOr(rest...);
-    return LogicalOr(first, rest_result);
+    NFAComponent *rest_result = Union(rest...);
+    return Union(first, rest_result);
   }
 }
 

@@ -27,7 +27,7 @@ extern simple_logger::BaseLogger logger;
 
 /*----------------------------------------------------------------------------*/
 
-namespace finite_automaton {
+namespace regular_expression {
 
 /**
  * class NFAEdge
@@ -36,6 +36,13 @@ namespace finite_automaton {
 NFAEdge *NFAEdge::CreateFromChar(char c) {
   auto edge = new NFAEdge;
   edge->set(c);
+  return edge;
+}
+
+
+NFAEdge *NFAEdge::CreateFromRange(char beg, char end) {
+  auto edge = new NFAEdge;
+  edge->SetRange(beg, end);
   return edge;
 }
 
@@ -128,6 +135,16 @@ NFAComponent *NFAComponent::CreateFromEdge(NFAEdge *e) {
 }
 
 
+NFAComponent *NFAComponent::CreateFromChar(char c) {
+  return CreateFromEdge(NFAEdge::CreateFromChar(c));
+}
+
+
+NFAComponent *NFAComponent::CreateFromRange(char beg, char end) {
+  return CreateFromEdge(NFAEdge::CreateFromRange(beg, end));
+}
+
+
 NFAComponent *NFAComponent::CreateFromString(const string &s) {
   return CreateFromEdge(NFAEdge::CreateFromString(s));
 }
@@ -198,7 +215,7 @@ NFAComponent *DoConcatenate(NFAComponent *lhs, NFAComponent *rhs) {
 }
 
 
-NFAComponent *DoLogicalOr(NFAComponent *lhs, NFAComponent *rhs) {
+NFAComponent *DoUnion(NFAComponent *lhs, NFAComponent *rhs) {
   NFANode *rhs_start = rhs->RemoveStart();
   lhs->start()->FetchEdges(rhs_start);
   delete rhs_start;
@@ -757,4 +774,4 @@ DFA *DFAOptimizer::Minimize() {
 }
 
 
-} // end of namespace finite_automaton
+} // end of namespace regular_expression
