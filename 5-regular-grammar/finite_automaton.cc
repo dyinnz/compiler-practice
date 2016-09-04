@@ -55,7 +55,11 @@ NFAEdge *NFAEdge::CreateFromString(const std::string &s) {
     return CreateFromChar(s[0]);
 
   } else {
-    return nullptr;
+    auto edge = new NFAEdge;
+    for (char c : s) {
+      edge->set(c);
+    }
+    return edge;
   }
 }
 
@@ -301,7 +305,6 @@ NFA::MatchDFS(NFANode *curr, const char *beg, const char *end) const {
     }
 
     if (match_pos == end) {
-      // get a match
       return match_pos;
     }
   }
@@ -310,9 +313,9 @@ NFA::MatchDFS(NFANode *curr, const char *beg, const char *end) const {
 }
 
 
-const char *NFA::Match(const char *beg, const char *end) const {
+bool NFA::Match(const char *beg, const char *end) const {
   logger.debug("{}(): {}", __func__, beg);
-  return (MatchDFS(start_, beg, end) == end) ? beg : nullptr;
+  return (MatchDFS(start_, beg, end) == end);
 }
 
 
@@ -336,7 +339,7 @@ void PrintNFARecur(const NFANode *u, vector<bool> &visit) {
   for (NFAEdge *edge : u->edges()) {
     NFANode *v = edge->next_node();
 
-    logger.debug("{}{}{}", to_string(*u), to_string(*edge), to_string(*v));
+    logger.log("{}{}{}", to_string(*u), to_string(*edge), to_string(*v));
 
     if (!visit[v->number()]) {
       PrintNFARecur(v, visit);
@@ -395,7 +398,7 @@ void DFA::NumberNode() {
 }
 
 
-const char *DFA::Match(const char *beg, const char *end) const {
+bool DFA::Match(const char *beg, const char *end) const {
   const char *s = beg;
   const DFANode *curr_node = start_;
 
@@ -409,11 +412,17 @@ const char *DFA::Match(const char *beg, const char *end) const {
       logger.debug("{}", to_string(*curr_node));
 
     } else {
-      return nullptr;
+      return false;
     }
   }
 
-  return curr_node->IsEnd() ? s : nullptr;
+  logger.debug("{} IsEnd: ", to_string(*curr_node), curr_node->IsEnd());
+  return curr_node->IsEnd();
+}
+
+
+bool DFA::Match(const std::string &s) const {
+  return Match(s.c_str(), s.c_str() + s.length());
 }
 
 
@@ -423,13 +432,18 @@ const char *DFA::Search(const char *begin, const char *end) const {
 }
 
 
+size_t DFA::Search(const std::string &s) const {
+  return -1;
+}
+
+
 // for debug
 void PrintDFARecur(const DFANode *u, std::vector<bool> &visit) {
   visit[u->number()] = true;
 
   for (auto p : u->edges()) {
     DFANode *v = p.second;
-    logger.debug("{}--{}--{}", to_string(*u), p.first, to_string(*v));
+    logger.log("{}--{}--{}", to_string(*u), p.first, to_string(*v));
 
     if (!visit[v->number()]) {
       PrintDFARecur(v, visit);
@@ -709,9 +723,9 @@ void DFAOptimizer::TryPartEachSet() {
     std::swap(new_partition, partition_);
   } while (last_size < partition_.size());
 
-  logger.log("end of partition");
+  logger.debug("end of partition");
   for (auto &s : partition_) {
-    logger.log("final parted set: {}", to_string(s));
+    logger.debug("final parted set: {}", to_string(s));
   }
 }
 

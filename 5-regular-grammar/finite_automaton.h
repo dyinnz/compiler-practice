@@ -361,7 +361,7 @@ public:
     }
   }
 
-  const char *Match(const char *beg, const char *end) const;
+  bool Match(const char *beg, const char *end) const;
 
   const char *Search(const char *begin, const char *end) const;
 
@@ -398,9 +398,9 @@ private:
 // for debug
 void PrintNFARecur(const NFANode *u, std::vector<bool> &visit);
 
-inline void PrintNFA(const NFANode *start, int max_number) {
-  std::vector<bool> visit(max_number);
-  PrintNFARecur(start, visit);
+inline void PrintNFA(const NFA *nfa) {
+  std::vector<bool> visit(nfa->size());
+  PrintNFARecur(nfa->start(), visit);
 }
 
 
@@ -531,9 +531,13 @@ public:
     return nodes_[number];
   }
 
-  const char *Match(const char *beg, const char *end) const;
+  bool Match(const char *beg, const char *end) const;
+
+  bool Match(const std::string &s) const;
 
   const char *Search(const char *begin, const char *end) const;
+
+  size_t Search(const std::string &s) const;
 
 private:
   void NumberNode();
@@ -548,9 +552,9 @@ private:
 // for debug
 void PrintDFARecur(const DFANode *u, std::vector<bool> &visit);
 
-inline void PrintDFA(const DFANode *start, int max_number) {
-  std::vector<bool> visit(max_number);
-  PrintDFARecur(start, visit);
+inline void PrintDFA(const DFA *dfa) {
+  std::vector<bool> visit(dfa->size());
+  PrintDFARecur(dfa->start(), visit);
 }
 
 

@@ -14,19 +14,25 @@ namespace regular_expression {
 /**
  * class REParser
  */
+
 DFA *REParser::Parse(const char *beg, const char *end) {
   REParser parser(beg, end);
 
   NFA *nfa = parser.ParseUnion(beg)->BuildNFA();
-  PrintNFA(nfa->start(), nfa->size());
+  // PrintNFA(nfa->start(), nfa->size());
 
   DFA *normal = DFA::ConvertFromNFA(nfa);
-  PrintDFA(normal->start(), normal->size());
+  // PrintDFA(normal->start(), normal->size());
 
   DFA *minimum = DFAOptimizer::Minimize(normal);
-  PrintDFA(minimum->start(), minimum->size());
+  // PrintDFA(minimum->start(), minimum->size());
 
   return minimum;
+}
+
+
+DFA *REParser::Parse(const std::string &s) {
+  return Parse(s.c_str(), s.c_str()+s.length());
 }
 
 
@@ -241,7 +247,7 @@ NFAComponent *REParser::ParseEscape(const char *&p) {
       break;
 
     default:
-      logger.error("{}(): unrecognized escape char", __func__);
+      logger.error("{}(): unrecognized escape char {}", __func__, int(*p));
       delete result;
       return nullptr;
   }
