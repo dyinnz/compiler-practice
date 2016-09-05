@@ -25,7 +25,10 @@
 
 namespace regular_expression {
 
-// pre-declaration
+/**
+ * class pre-declaration
+ */
+
 class NFAEdge;
 
 class Node;
@@ -40,17 +43,70 @@ class NFA;
 
 class NumberSet;
 
-class DFAConverter;
-
 class DFA;
 
-class DFAOptimizer;
+
+/**
+ * get the string representation
+ */
+
+std::string to_string(const NFAEdge &edge);
+
+std::string to_string(const Node &node);
+
+std::string to_string(const NumberSet &num_set);
+
+
+/**
+ * for debug
+ */
+
+void PrintNFA(const NFA *nfa);
+
+void PrintDFA(const DFA *dfa);
+
+
+/**
+ * Auxiliary functions for composing
+ */
+
+NFAComponent *Concatenate(NFAComponent *lhs, NFAComponent *rhs);
+
+template<class ...A>
+NFAComponent *Concatenate(NFAComponent *first, A... rest);
+
+NFAComponent *Union(NFAComponent *lhs, NFAComponent *rhs);
+
+template<class ...A>
+NFAComponent *Union(NFAComponent *first, A... rest);
+
+NFAComponent *KleenStar(NFAComponent *nfa);
+
+NFAComponent *Optional(NFAComponent *nfa);
+
+NFAComponent *LeastOne(NFAComponent *nfa);
+
+NFA *UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs);
+
+
+/**
+ * @param normal    the DFA to be minimized
+ * @return          the minimum DFA, may be the same one if the parameter has
+ *                  already minimum DFA
+ */
+DFA *MinimizeDFA(const DFA *normal);
+
+/**
+ * @param nfa   the NFA to be converted
+ * @return      the DFA convert from NFA
+ */
+DFA *ConvertNFAToDFA(const NFA *nfa);
 
 
 /*----------------------------------------------------------------------------*/
 
 /**
- * unidirectional edge connected with NFA nodes
+ * @brief   unidirectional edge connected with NFA nodes
  */
 class NFAEdge {
 public:
@@ -110,13 +166,11 @@ private:
   NFANode *next_node_{nullptr};
 };
 
-std::string to_string(const NFAEdge &edge);
-
 
 /*----------------------------------------------------------------------------*/
 
 /**
- * common abstract super class of NFANode and DFANode
+ * @brief   common abstract super class of NFANode and DFANode
  */
 class Node {
 public:
@@ -167,16 +221,15 @@ public:
 
 private:
   State state_;
-  int type_ {kUnsetInt};
+  int type_{kUnsetInt};
   int number_{kUnsetInt};
 };
 
-std::string to_string(const Node &node);
 
 /*----------------------------------------------------------------------------*/
 
 /**
- *  only for NFA diagram
+ *  @brief  only for NFA diagram
  */
 class NFANode : public Node {
 public:
@@ -209,7 +262,7 @@ private:
 /*----------------------------------------------------------------------------*/
 
 /**
- * only for DFA diagram
+ * @brief   only for DFA diagram
  */
 class DFANode : public Node {
 public:
@@ -242,7 +295,7 @@ private:
 /*----------------------------------------------------------------------------*/
 
 /**
- * non-deterministic finite automaton component, only contains nodes
+ * @brief   non-deterministic finite automaton component, only contains nodes
  */
 class NFAComponent {
 public:
@@ -302,47 +355,7 @@ private:
 /*----------------------------------------------------------------------------*/
 
 /**
- * Auxiliary functions for composing
- */
-NFAComponent *Concatenate(NFAComponent *lhs, NFAComponent *rhs);
-
-template<class ...A>
-NFAComponent *Concatenate(NFAComponent *first, A... rest) {
-  if (0 == sizeof...(rest)) {
-    return first;
-  } else {
-    NFAComponent *rest_result = Concatenate(rest...);
-    return Concatenate(first, rest_result);
-  }
-}
-
-
-NFAComponent *Union(NFAComponent *lhs, NFAComponent *rhs);
-
-template<class ...A>
-NFAComponent *Union(NFAComponent *first, A... rest) {
-  if (0 == sizeof...(rest)) {
-    return first;
-  } else {
-    NFAComponent *rest_result = Union(rest...);
-    return Union(first, rest_result);
-  }
-}
-
-
-NFAComponent *KleenStar(NFAComponent *nfa);
-
-NFAComponent *Optional(NFAComponent *nfa);
-
-NFAComponent *LeastOne(NFAComponent *nfa);
-
-
-NFA *TokenUnion(NFAComponent *lhs, NFAComponent *rhs);
-
-/*----------------------------------------------------------------------------*/
-
-/**
- * non-deterministic finite automaton, could match or search a string.
+ * @brief   non-deterministic finite automaton, could match or search a string.
  */
 class NFA {
 public:
@@ -387,19 +400,10 @@ private:
 };
 
 
-// for debug
-void PrintNFARecur(const NFANode *u, std::vector<bool> &visit);
-
-inline void PrintNFA(const NFA *nfa) {
-  std::vector<bool> visit(nfa->size());
-  PrintNFARecur(nfa->start(), visit);
-}
-
-
 /*----------------------------------------------------------------------------*/
 
 /**
- * a set contains number, support hashing and sharing with others
+ * @brief   a set contains number, support hashing and sharing with others
  */
 class NumberSet {
 public:
@@ -451,54 +455,12 @@ inline bool operator!=(const NumberSet &lhs, const NumberSet &rhs) {
   return !(lhs == rhs);
 }
 
-std::string to_string(const NumberSet &num_set);
-
 
 /*----------------------------------------------------------------------------*/
 
 /**
- * a helper class, convert NFA to DFA
+ * @brief   deterministric finite automaton
  */
-class DFAConverter {
-public:
-  static DFA *ConvertFromNFA(NFA *nfa);
-
-private:
-  DFAConverter(NFA *nfa) : nfa_(nfa) {}
-
-  const NFANode *GetNFANode(int number) const {
-    return nfa_->GetNode(number);
-  }
-
-  void ConversionPreamble();
-
-  const NumberSet &EpsilonClosure(const NFANode *u);
-
-  NFAEdge::CharMasks GetEdgeCharMasks(const NumberSet &num_set);
-
-  NumberSet GetAdjacentSet(const NumberSet &curr_set, char c);
-
-  DFANode *ConstructDFADiagram();
-
-  std::vector<DFANode *> CollectEndNodes();
-
-  std::vector<DFANode *> CollectAllNodes();
-
-  DFA *Convert();
-
-private:
-  std::unordered_map<NumberSet, DFANode *, NumberSet::Hasher> set_to_dfa_node_;
-  std::vector<NumberSet> e_closures_;
-  NFA *nfa_;
-};
-
-
-/*----------------------------------------------------------------------------*/
-
-/**
- *  deterministric finite automaton
- */
-
 class DFA {
 public:
   static DFA *ConvertFromNFA(NFA *nfa);
@@ -541,51 +503,27 @@ private:
 };
 
 
-// for debug
-void PrintDFARecur(const DFANode *u, std::vector<bool> &visit);
-
-inline void PrintDFA(const DFA *dfa) {
-  std::vector<bool> visit(dfa->size());
-  PrintDFARecur(dfa->start(), visit);
-}
-
-
 /*----------------------------------------------------------------------------*/
 
-/**
- * a help class, minimize the DFA
- */
-class DFAOptimizer {
-public:
-  static DFA *Minimize(DFA *normal);
-
-private:
-  DFAOptimizer(DFA *normal) : normal_(normal), num_to_set_(normal->size()) {}
-
-  const DFANode *GetNormalNode(int number) {
-    return normal_->GetNode(number);
+template<class ...A>
+NFAComponent *Concatenate(NFAComponent *first, A... rest) {
+  if (0 == sizeof...(rest)) {
+    return first;
+  } else {
+    NFAComponent *rest_result = Concatenate(rest...);
+    return Concatenate(first, rest_result);
   }
+}
 
-  void InitPartition();
-
-  void BuildPartitionMap();
-
-  std::unordered_set<char> GetSetEdgeChars(const NumberSet &s);
-
-  bool PartSetByChar(std::list<NumberSet> &parted_curr_set,
-                     const NumberSet &curr_set, char c);
-
-  void TryPartEachSet();
-
-  DFA *ConstructFromSets();
-
-  DFA *Minimize();
-
-private:
-  DFA *normal_{nullptr};
-  std::list<NumberSet> partition_;
-  std::vector<NumberSet *> num_to_set_;
-};
+template<class ...A>
+NFAComponent *Union(NFAComponent *first, A... rest) {
+  if (0 == sizeof...(rest)) {
+    return first;
+  } else {
+    NFAComponent *rest_result = Union(rest...);
+    return Union(first, rest_result);
+  }
+}
 
 
 } // end of namespace transition_map

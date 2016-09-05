@@ -14,7 +14,7 @@ void Tokenizer::BuildTokenizer(const std::string &lhs,
 
   // PrintNFA(rhs_comp->BuildNFA());
 
-  NFA* token_nfa = TokenUnion(lhs_comp, rhs_comp);
+  NFA* token_nfa = UnionWithMultiEnd(lhs_comp, rhs_comp);
   PrintNFA(token_nfa);
 
   DFA* token_dfa = DFA::ConvertFromNFA(token_nfa);

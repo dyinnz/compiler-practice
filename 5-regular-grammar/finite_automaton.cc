@@ -27,6 +27,429 @@ extern simple_logger::BaseLogger logger;
 
 /*----------------------------------------------------------------------------*/
 
+namespace {
+
+using namespace regular_expression;
+
+
+/**
+ * @brief   a helper class, convert NFA to DFA
+ */
+class DFAConverter {
+private:
+  friend DFA *regular_expression::ConvertNFAToDFA(const NFA *nfa);
+
+  DFAConverter(const NFA *nfa) : nfa_(nfa) {}
+
+  const NFANode *GetNFANode(int number) const {
+    return nfa_->GetNode(number);
+  }
+
+  void ConversionPreamble();
+
+  const NumberSet &EpsilonClosure(const NFANode *u);
+
+  NFAEdge::CharMasks GetEdgeCharMasks(const NumberSet &num_set);
+
+  NumberSet GetAdjacentSet(const NumberSet &curr_set, char c);
+
+  DFANode *ConstructDFADiagram();
+
+  std::vector<DFANode *> CollectEndNodes();
+
+  std::vector<DFANode *> CollectAllNodes();
+
+  DFA *Convert();
+
+private:
+  std::unordered_map<NumberSet, DFANode *, NumberSet::Hasher> set_to_dfa_node_;
+  std::vector<NumberSet> e_closures_;
+  const NFA *nfa_;
+};
+
+
+void DFAConverter::ConversionPreamble() {
+  e_closures_.resize(nfa_->size());
+  set_to_dfa_node_.reserve(nfa_->size());
+}
+
+
+const NumberSet &DFAConverter::EpsilonClosure(const NFANode *u) {
+  NumberSet &s = e_closures_[u->number()];
+  if (!s.empty()) {
+    return s;
+  }
+
+  // construct epsilon closure
+  s.insert(u->number());
+  for (NFAEdge *edge : u->edges()) {
+    if (edge->IsEpsilon()) {
+      NFANode *v = edge->next_node();
+
+      if (!s.contains(v->number())) {
+        auto v_s = EpsilonClosure(v);
+        s.insert(v_s);
+      }
+    }
+  }
+  return s;
+}
+
+
+NFAEdge::CharMasks DFAConverter::GetEdgeCharMasks(const NumberSet &num_set) {
+  NFAEdge::CharMasks char_masks;
+  for (int num : num_set) {
+    for (NFAEdge *edge : GetNFANode(num)->edges()) {
+      char_masks |= edge->char_masks();
+    }
+  }
+  return char_masks;
+}
+
+
+NumberSet DFAConverter::GetAdjacentSet(const NumberSet &curr_set, char c) {
+  NumberSet adjacent_set;
+  for (int num : curr_set) {
+    for (NFAEdge *edge : GetNFANode(num)->edges()) {
+      if (edge->test(c)) {
+        auto e_closure = EpsilonClosure(edge->next_node());
+        adjacent_set.insert(e_closure);
+      }
+    }
+  }
+  return adjacent_set;
+}
+
+
+DFANode *DFAConverter::ConstructDFADiagram() {
+  auto start_dfa_node = new DFANode(Node::kStart);
+
+  NumberSet start_set = EpsilonClosure(nfa_->start());
+  set_to_dfa_node_.insert({start_set, start_dfa_node});
+
+  std::queue<NumberSet> q;
+  q.push(start_set);
+
+  while (!q.empty()) {
+    NumberSet curr_set = q.front();
+    DFANode *dfa_curr = set_to_dfa_node_[curr_set];
+
+    logger.debug("current set {}", to_string(curr_set));
+
+    NFAEdge::CharMasks chars = GetEdgeCharMasks(curr_set);
+    for (char c = 0; c < CHAR_MAX; ++c) {
+      if (chars.test(c)) {
+
+        NumberSet adjacent_set = GetAdjacentSet(curr_set, c);
+
+        auto iter = set_to_dfa_node_.find(adjacent_set);
+        if (set_to_dfa_node_.end() == iter) {
+          iter = set_to_dfa_node_.insert(
+              {adjacent_set, new DFANode(Node::kNormal)}).first;
+          q.push(adjacent_set);
+        }
+        DFANode *dfa_adjacent = iter->second;
+
+        logger.debug("char {}: adjacent set {}, node: {}", c,
+                     to_string(adjacent_set), dfa_adjacent);
+
+        dfa_curr->AddEdge(c, dfa_adjacent);
+      }
+    }
+
+    q.pop();
+  }
+
+  return start_dfa_node;
+}
+
+
+vector<DFANode *> DFAConverter::CollectEndNodes() {
+  // collect END nodes
+  vector<DFANode *> ends;
+  for (auto p : set_to_dfa_node_) {
+    NumberSet num_set = p.first;
+    DFANode *dfa_node = p.second;
+
+    for (int num : num_set) {
+      const NFANode *nfa_node = GetNFANode(num);
+      if (nfa_node->IsEnd()) {
+        if (!dfa_node->IsEnd()) {
+          // first END NFANode in set
+          dfa_node->AttachState(DFANode::kEnd);
+          dfa_node->set_type(nfa_node->type());
+          ends.push_back(dfa_node);
+
+        } else {
+          // set the type with higher priority
+          if (nfa_node->type() < dfa_node->type()) {
+            dfa_node->set_type(nfa_node->type());
+          }
+        }
+      } // end of nfa_node->IsEnd()
+    }
+  }
+  return ends;
+}
+
+
+vector<DFANode *> DFAConverter::CollectAllNodes() {
+  // collect all nodes and number them
+  vector<DFANode *> nodes;
+  for (auto p : set_to_dfa_node_) {
+    nodes.push_back(p.second);
+  }
+  return nodes;
+}
+
+
+DFA *DFAConverter::Convert() {
+
+  ConversionPreamble();
+
+  DFANode *start = ConstructDFADiagram();
+
+  auto ends = CollectEndNodes();
+  auto nodes = CollectAllNodes();
+
+  return new DFA(start, move(ends), move(nodes));
+}
+
+
+/*----------------------------------------------------------------------------*/
+
+/**
+ * @brief   a help class, minimize the DFA
+ */
+class DFAOptimizer {
+private:
+  friend DFA *regular_expression::MinimizeDFA(const DFA *normal);
+
+  DFAOptimizer(const DFA *normal) : normal_(normal),
+                                    num_to_set_(normal->size()) {}
+
+  const DFANode *GetNormalNode(int number) {
+    return normal_->GetNode(number);
+  }
+
+  void InitPartition();
+
+  void BuildPartitionMap();
+
+  std::unordered_set<char> GetSetEdgeChars(const NumberSet &s);
+
+  bool PartSetByChar(std::list<NumberSet> &parted_curr_set,
+                     const NumberSet &curr_set, char c);
+
+  void TryPartEachSet();
+
+  DFA *ConstructFromSets();
+
+  DFA *Minimize();
+
+private:
+  const DFA *normal_{nullptr};
+  std::list<NumberSet> partition_;
+  std::vector<NumberSet *> num_to_set_;
+};
+
+
+// implement
+void DFAOptimizer::InitPartition() {
+  partition_.emplace_back();
+  partition_.emplace_back();
+
+  NumberSet &start_set = partition_.front();
+  NumberSet &end_set = partition_.back();
+
+  for (size_t i = 0; i < normal_->size(); ++i) {
+    const DFANode *node = normal_->GetNode(i);
+    if (node->IsEnd()) {
+      end_set.insert(node->number());
+    } else {
+      start_set.insert(node->number());
+    }
+  }
+
+  if (start_set.empty()) {
+    partition_.pop_front();
+  }
+}
+
+
+void DFAOptimizer::BuildPartitionMap() {
+  for (NumberSet &s : partition_) {
+    for (int num : s) {
+      num_to_set_[num] = &s;
+    }
+  }
+}
+
+
+unordered_set<char> DFAOptimizer::GetSetEdgeChars(const NumberSet &s) {
+  unordered_set<char> chars;
+  for (int num : s) {
+    for (auto p : GetNormalNode(num)->edges()) {
+      chars.insert(p.first);
+    }
+  }
+  return chars;
+}
+
+
+bool DFAOptimizer::PartSetByChar(list<NumberSet> &parted_sets,
+                                 const NumberSet &curr_set, char c) {
+  logger.debug("part set: {} by {}", to_string(curr_set), c);
+
+  unordered_map<NumberSet *, NumberSet> old_to_new;
+  for (int u_num : curr_set) {
+    const DFANode *u = GetNormalNode(u_num);
+    const DFANode *v = u->GetNextNode(c);
+
+    if (v) {
+      old_to_new[num_to_set_[v->number()]].insert(u_num);
+    } else {
+      old_to_new[nullptr].insert(u_num);
+    }
+  }
+
+  bool is_parted = false;
+  for (auto p : old_to_new) {
+    if (p.second != curr_set) {
+      is_parted = true;
+      PartSetByChar(parted_sets, p.second, c);
+    }
+  }
+
+  if (is_parted) {
+    auto iter = std::unique(parted_sets.begin(), parted_sets.end());
+    parted_sets.erase(iter, parted_sets.end());
+
+  } else {
+    parted_sets.push_back(curr_set);
+  }
+  return is_parted;
+}
+
+
+void DFAOptimizer::TryPartEachSet() {
+  size_t last_size = 0;
+  list<NumberSet> new_partition;
+  do {
+    logger.debug("new loop");
+
+    last_size = partition_.size();
+    new_partition.clear();
+
+    BuildPartitionMap();
+
+    for (NumberSet &curr_set : partition_) {
+
+      logger.debug("current set: {}", to_string(curr_set));
+
+      auto chars = GetSetEdgeChars(curr_set);
+      bool is_parted = false;
+
+      for (char c : chars) {
+        list<NumberSet> parted_sets;
+        is_parted = PartSetByChar(parted_sets, curr_set, c);
+
+        if (is_parted) {
+          new_partition.splice(new_partition.begin(), parted_sets);
+          break;
+        }
+      }
+
+      if (!is_parted) {
+        new_partition.push_back(curr_set);
+      }
+    }
+
+    std::swap(new_partition, partition_);
+  } while (last_size < partition_.size());
+
+  logger.debug("end of partition");
+  for (auto &s : partition_) {
+    logger.debug("final parted set: {}", to_string(s));
+  }
+}
+
+
+DFA *DFAOptimizer::ConstructFromSets() {
+  std::vector<DFANode *> normal_to_min(normal_->size());
+
+  DFANode *start{nullptr};
+  vector<DFANode *> ends;
+  vector<DFANode *> nodes;
+
+  // collect
+  for (NumberSet &s : partition_) {
+    auto *min_node = new DFANode(Node::kNormal);
+    nodes.push_back(min_node);
+
+    for (int old_num : s) {
+      const DFANode *normal_node = GetNormalNode(old_num);
+      normal_to_min[old_num] = min_node;
+
+      if (normal_node->IsStart()) {
+        min_node->AttachState(Node::kStart);
+        start = min_node;
+      }
+
+      if (normal_node->IsEnd()) {
+        if (!min_node->IsEnd()) {
+          // first END DFANode in set
+          min_node->AttachState(Node::kEnd);
+          min_node->set_type(normal_node->type());
+          ends.push_back(min_node);
+        } else {
+          // set the type with higher priority
+          if (normal_node->type() < min_node->type()) {
+            min_node->set_type(normal_node->type());
+          }
+        }
+      }
+
+    } // end of inner for
+  } // end of outer for
+
+  // add edges
+  for (NumberSet &s : partition_) {
+    DFANode *min_u = normal_to_min[*s.begin()];
+
+    for (int num : s) {
+      for (auto p : GetNormalNode(num)->edges()) {
+        char c = p.first;
+        DFANode *min_v = normal_to_min[p.second->number()];
+        min_u->AddEdge(c, min_v);
+      }
+    }
+  }
+
+  return new DFA(start, move(ends), move(nodes));
+}
+
+
+DFA *DFAOptimizer::Minimize() {
+
+  InitPartition();
+  if (partition_.size() <= 1) {
+    // need not minimizing
+    return const_cast<DFA *>(normal_);
+  }
+
+  TryPartEachSet();
+
+  DFA *minimum = ConstructFromSets();
+  return minimum;
+}
+
+
+} // end of anonymous namespace
+
+
+/*----------------------------------------------------------------------------*/
+
 namespace regular_expression {
 
 /**
@@ -261,7 +684,7 @@ NFAComponent *LeastOne(NFAComponent *nfa) {
 }
 
 
-NFA *TokenUnion(NFAComponent *lhs, NFAComponent *rhs) {
+NFA *UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs) {
   assert(Node::kUnsetInt != lhs->end()->type());
   assert(Node::kUnsetInt != rhs->end()->type());
 
@@ -340,7 +763,7 @@ const char *NFA::Search(const char *begin, const char *end) const {
 
 
 // for debug
-void PrintNFARecur(const NFANode *u, vector<bool> &visit) {
+static void PrintNFARecur(const NFANode *u, vector<bool> &visit) {
   visit[u->number()] = true;
 
   for (NFAEdge *edge : u->edges()) {
@@ -352,6 +775,12 @@ void PrintNFARecur(const NFANode *u, vector<bool> &visit) {
       PrintNFARecur(v, visit);
     }
   }
+}
+
+
+void PrintNFA(const NFA *nfa) {
+  std::vector<bool> visit(nfa->size());
+  PrintNFARecur(nfa->start(), visit);
 }
 
 
@@ -394,11 +823,6 @@ string to_string(const set<int> &num_set) {
  * class DFA
  */
 
-DFA *DFA::ConvertFromNFA(NFA *nfa) {
-  return DFAConverter::ConvertFromNFA(nfa);
-}
-
-
 void DFA::NumberNode() {
   for (size_t i = 0; i < nodes_.size(); ++i) {
     nodes_[i]->set_number(i);
@@ -416,7 +840,7 @@ bool DFA::Match(const char *beg, const char *end) const {
 
     if (next_node) {
       curr_node = next_node;
-      s+= 1;
+      s += 1;
       logger.debug("{}", to_string(*curr_node));
 
     } else {
@@ -444,8 +868,7 @@ size_t DFA::Search(const std::string &s) const {
 }
 
 
-// for debug
-void PrintDFARecur(const DFANode *u, std::vector<bool> &visit) {
+static void PrintDFARecur(const DFANode *u, std::vector<bool> &visit) {
   visit[u->number()] = true;
 
   for (auto p : u->edges()) {
@@ -458,362 +881,21 @@ void PrintDFARecur(const DFANode *u, std::vector<bool> &visit) {
   }
 }
 
-/*----------------------------------------------------------------------------*/
-/**
- * class DFAConverter
- */
 
-void DFAConverter::ConversionPreamble() {
-  e_closures_.resize(nfa_->size());
-  set_to_dfa_node_.reserve(nfa_->size());
-}
-
-
-const NumberSet &DFAConverter::EpsilonClosure(const NFANode *u) {
-  NumberSet &s = e_closures_[u->number()];
-  if (!s.empty()) {
-    return s;
-  }
-
-  // construct epsilon closure
-  s.insert(u->number());
-  for (NFAEdge *edge : u->edges()) {
-    if (edge->IsEpsilon()) {
-      NFANode *v = edge->next_node();
-
-      if (!s.contains(v->number())) {
-        auto v_s = EpsilonClosure(v);
-        s.insert(v_s);
-      }
-    }
-  }
-  return s;
-}
-
-
-NFAEdge::CharMasks DFAConverter::GetEdgeCharMasks(const NumberSet &num_set) {
-  NFAEdge::CharMasks char_masks;
-  for (int num : num_set) {
-    for (NFAEdge *edge : GetNFANode(num)->edges()) {
-      char_masks |= edge->char_masks();
-    }
-  }
-  return char_masks;
-}
-
-
-NumberSet DFAConverter::GetAdjacentSet(const NumberSet &curr_set, char c) {
-  NumberSet adjacent_set;
-  for (int num : curr_set) {
-    for (NFAEdge *edge : GetNFANode(num)->edges()) {
-      if (edge->test(c)) {
-        auto e_closure = EpsilonClosure(edge->next_node());
-        adjacent_set.insert(e_closure);
-      }
-    }
-  }
-  return adjacent_set;
-}
-
-
-DFANode *DFAConverter::ConstructDFADiagram() {
-  auto start_dfa_node = new DFANode(Node::kStart);
-
-  NumberSet start_set = EpsilonClosure(nfa_->start());
-  set_to_dfa_node_.insert({start_set, start_dfa_node});
-
-  std::queue<NumberSet> q;
-  q.push(start_set);
-
-  while (!q.empty()) {
-    NumberSet curr_set = q.front();
-    DFANode *dfa_curr = set_to_dfa_node_[curr_set];
-
-    logger.debug("current set {}", to_string(curr_set));
-
-    NFAEdge::CharMasks chars = GetEdgeCharMasks(curr_set);
-    for (char c = 0; c < CHAR_MAX; ++c) {
-      if (chars.test(c)) {
-
-        NumberSet adjacent_set = GetAdjacentSet(curr_set, c);
-
-        auto iter = set_to_dfa_node_.find(adjacent_set);
-        if (set_to_dfa_node_.end() == iter) {
-          iter = set_to_dfa_node_.insert(
-              {adjacent_set, new DFANode(Node::kNormal)}).first;
-          q.push(adjacent_set);
-        }
-        DFANode *dfa_adjacent = iter->second;
-
-        logger.debug("char {}: adjacent set {}, node: {}", c,
-                     to_string(adjacent_set), dfa_adjacent);
-
-        dfa_curr->AddEdge(c, dfa_adjacent);
-      }
-    }
-
-    q.pop();
-  }
-
-  return start_dfa_node;
-}
-
-
-vector<DFANode *> DFAConverter::CollectEndNodes() {
-  // collect END nodes
-  vector<DFANode *> ends;
-  for (auto p : set_to_dfa_node_) {
-    NumberSet num_set = p.first;
-    DFANode *dfa_node = p.second;
-
-    for (int num : num_set) {
-      const NFANode *nfa_node = GetNFANode(num);
-      if (nfa_node->IsEnd()) {
-        if (!dfa_node->IsEnd()) {
-          // first END NFANode in set
-          dfa_node->AttachState(DFANode::kEnd);
-          dfa_node->set_type(nfa_node->type());
-          ends.push_back(dfa_node);
-
-        } else {
-          // set the type with higher priority
-          if (nfa_node->type() < dfa_node->type()) {
-            dfa_node->set_type(nfa_node->type());
-          }
-        }
-      } // end of nfa_node->IsEnd()
-    }
-  }
-  return ends;
-}
-
-
-vector<DFANode *> DFAConverter::CollectAllNodes() {
-  // collect all nodes and number them
-  vector<DFANode *> nodes;
-  for (auto p : set_to_dfa_node_) {
-    nodes.push_back(p.second);
-  }
-  return nodes;
-}
-
-
-DFA *DFAConverter::Convert() {
-
-  ConversionPreamble();
-
-  DFANode *start = ConstructDFADiagram();
-
-  auto ends = CollectEndNodes();
-  auto nodes = CollectAllNodes();
-
-  return new DFA(start, move(ends), move(nodes));
-}
-
-
-DFA *DFAConverter::ConvertFromNFA(NFA *nfa) {
-  return DFAConverter(nfa).Convert();
+void PrintDFA(const DFA *dfa) {
+  vector<bool> visit(dfa->size());
+  PrintDFARecur(dfa->start(), visit);
 }
 
 
 /*----------------------------------------------------------------------------*/
-/**
- * class DFAOptimizer
- */
 
-DFA *DFAOptimizer::Minimize(DFA *normal) {
+DFA *MinimizeDFA(const DFA *normal) {
   return DFAOptimizer(normal).Minimize();
 }
 
-
-void DFAOptimizer::InitPartition() {
-  partition_.emplace_back();
-  partition_.emplace_back();
-
-  NumberSet &start_set = partition_.front();
-  NumberSet &end_set = partition_.back();
-
-  for (size_t i = 0; i < normal_->size(); ++i) {
-    const DFANode *node = normal_->GetNode(i);
-    if (node->IsEnd()) {
-      end_set.insert(node->number());
-    } else {
-      start_set.insert(node->number());
-    }
-  }
-
-  if (start_set.empty()) {
-    partition_.pop_front();
-  }
+DFA *ConvertNFAToDFA(const NFA *nfa) {
+  return DFAConverter(nfa).Convert();
 }
-
-
-void DFAOptimizer::BuildPartitionMap() {
-  for (NumberSet &s : partition_) {
-    for (int num : s) {
-      num_to_set_[num] = &s;
-    }
-  }
-}
-
-
-unordered_set<char> DFAOptimizer::GetSetEdgeChars(const NumberSet &s) {
-  unordered_set<char> chars;
-  for (int num : s) {
-    for (auto p : GetNormalNode(num)->edges()) {
-      chars.insert(p.first);
-    }
-  }
-  return chars;
-}
-
-
-bool DFAOptimizer::PartSetByChar(list<NumberSet> &parted_sets,
-                                 const NumberSet &curr_set, char c) {
-  logger.debug("part set: {} by {}", to_string(curr_set), c);
-
-  unordered_map<NumberSet *, NumberSet> old_to_new;
-  for (int u_num : curr_set) {
-    const DFANode *u = GetNormalNode(u_num);
-    const DFANode *v = u->GetNextNode(c);
-
-    if (v) {
-      old_to_new[num_to_set_[v->number()]].insert(u_num);
-    } else {
-      old_to_new[nullptr].insert(u_num);
-    }
-  }
-
-  bool is_parted = false;
-  for (auto p : old_to_new) {
-    if (p.second != curr_set) {
-      is_parted = true;
-      PartSetByChar(parted_sets, p.second, c);
-    }
-  }
-
-  if (is_parted) {
-    auto iter = std::unique(parted_sets.begin(), parted_sets.end());
-    parted_sets.erase(iter, parted_sets.end());
-
-  } else {
-    parted_sets.push_back(curr_set);
-  }
-  return is_parted;
-}
-
-
-void DFAOptimizer::TryPartEachSet() {
-  size_t last_size = 0;
-  list<NumberSet> new_partition;
-  do {
-    logger.debug("new loop");
-
-    last_size = partition_.size();
-    new_partition.clear();
-
-    BuildPartitionMap();
-
-    for (NumberSet &curr_set : partition_) {
-
-      logger.debug("current set: {}", to_string(curr_set));
-
-      auto chars = GetSetEdgeChars(curr_set);
-      bool is_parted = false;
-
-      for (char c : chars) {
-        list<NumberSet> parted_sets;
-        is_parted = PartSetByChar(parted_sets, curr_set, c);
-
-        if (is_parted) {
-          new_partition.splice(new_partition.begin(), parted_sets);
-          break;
-        }
-      }
-
-      if (!is_parted) {
-        new_partition.push_back(curr_set);
-      }
-    }
-
-    std::swap(new_partition, partition_);
-  } while (last_size < partition_.size());
-
-  logger.debug("end of partition");
-  for (auto &s : partition_) {
-    logger.debug("final parted set: {}", to_string(s));
-  }
-}
-
-
-DFA *DFAOptimizer::ConstructFromSets() {
-  std::vector<DFANode *> normal_to_min(normal_->size());
-
-  DFANode *start{nullptr};
-  vector<DFANode *> ends;
-  vector<DFANode *> nodes;
-
-  // collect
-  for (NumberSet &s : partition_) {
-    auto *min_node = new DFANode(Node::kNormal);
-    nodes.push_back(min_node);
-
-    for (int old_num : s) {
-      const DFANode *normal_node = GetNormalNode(old_num);
-      normal_to_min[old_num] = min_node;
-
-      if (normal_node->IsStart()) {
-        min_node->AttachState(Node::kStart);
-        start = min_node;
-      }
-
-      if (normal_node->IsEnd()) {
-        if (!min_node->IsEnd()) {
-          // first END DFANode in set
-          min_node->AttachState(Node::kEnd);
-          min_node->set_type(normal_node->type());
-          ends.push_back(min_node);
-        } else {
-          // set the type with higher priority
-          if (normal_node->type() < min_node->type()) {
-            min_node->set_type(normal_node->type());
-          }
-        }
-      }
-
-    } // end of inner for
-  } // end of outer for
-
-  // add edges
-  for (NumberSet &s : partition_) {
-    DFANode *min_u = normal_to_min[*s.begin()];
-
-    for (int num : s) {
-      for (auto p : GetNormalNode(num)->edges()) {
-        char c = p.first;
-        DFANode *min_v = normal_to_min[p.second->number()];
-        min_u->AddEdge(c, min_v);
-      }
-    }
-  }
-
-  return new DFA(start, move(ends), move(nodes));
-}
-
-
-DFA *DFAOptimizer::Minimize() {
-
-  InitPartition();
-  if (partition_.size() <= 1) {
-    // need not minimizing
-    return normal_;
-  }
-
-  TryPartEachSet();
-
-  DFA *minimum = ConstructFromSets();
-  return minimum;
-}
-
 
 } // end of namespace regular_expression

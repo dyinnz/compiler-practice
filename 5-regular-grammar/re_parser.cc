@@ -21,10 +21,10 @@ DFA *REParser::ParseToDFA(const char *beg, const char *end) {
   NFA *nfa = parser.ParseUnion(beg)->BuildNFA();
   // PrintNFA(nfa->start(), nfa->size());
 
-  DFA *normal = DFA::ConvertFromNFA(nfa);
+  DFA *normal = ConvertNFAToDFA(nfa);
   // PrintDFA(normal->start(), normal->size());
 
-  DFA *minimum = DFAOptimizer::Minimize(normal);
+  DFA *minimum = MinimizeDFA(normal);
   // PrintDFA(minimum->start(), minimum->size());
 
   return minimum;
