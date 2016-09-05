@@ -66,8 +66,6 @@ public:
 
   static NFAEdge *CreateFromString(const std::string &s);
 
-  static NFAEdge *Merge(NFAEdge *lhs, NFAEdge *rhs);
-
 public:
   NFANode *next_node() {
     return next_node_;
@@ -89,16 +87,16 @@ public:
     return char_masks_;
   }
 
+  void set() {
+    char_masks_.set();
+  }
+
   void set(char c) {
     char_masks_.set(c);
   }
 
   void flip() {
     char_masks_.flip();
-  }
-
-  void SetAll() {
-    char_masks_.set();
   }
 
   void SetRange(char beg, char end) {
@@ -126,12 +124,20 @@ public:
     kStart, kEnd, kStartEnd, kNormal
   };
 
-  constexpr static int kUnsetNumber{-1};
+  constexpr static int kUnsetInt{-1};
 
 public:
   Node(State state) : state_(state) {}
 
   virtual ~Node() = 0;
+
+  int type() const {
+    return type_;
+  }
+
+  void set_type(int type) {
+    type_ = type;
+  }
 
   bool IsStart() const {
     return kStart == state_ || kStartEnd == state_;
@@ -161,9 +167,11 @@ public:
 
 private:
   State state_;
-  int number_{kUnsetNumber};
+  int type_ {kUnsetInt};
+  int number_{kUnsetInt};
 };
 
+std::string to_string(const Node &node);
 
 /*----------------------------------------------------------------------------*/
 
@@ -296,11 +304,7 @@ private:
 /**
  * Auxiliary functions for composing
  */
-NFAComponent *DoConcatenate(NFAComponent *lhs, NFAComponent *rhs);
-
-inline NFAComponent *Concatenate(NFAComponent *lhs, NFAComponent *rhs) {
-  return DoConcatenate(lhs, rhs);
-}
+NFAComponent *Concatenate(NFAComponent *lhs, NFAComponent *rhs);
 
 template<class ...A>
 NFAComponent *Concatenate(NFAComponent *first, A... rest) {
@@ -313,11 +317,7 @@ NFAComponent *Concatenate(NFAComponent *first, A... rest) {
 }
 
 
-NFAComponent *DoUnion(NFAComponent *lhs, NFAComponent *rhs);
-
-inline NFAComponent *Union(NFAComponent *lhs, NFAComponent *rhs) {
-  return DoUnion(lhs, rhs);
-}
+NFAComponent *Union(NFAComponent *lhs, NFAComponent *rhs);
 
 template<class ...A>
 NFAComponent *Union(NFAComponent *first, A... rest) {
@@ -337,6 +337,8 @@ NFAComponent *Optional(NFAComponent *nfa);
 NFAComponent *LeastOne(NFAComponent *nfa);
 
 
+NFA *TokenUnion(NFAComponent *lhs, NFAComponent *rhs);
+
 /*----------------------------------------------------------------------------*/
 
 /**
@@ -344,18 +346,13 @@ NFAComponent *LeastOne(NFAComponent *nfa);
  */
 class NFA {
 public:
-  NFA(NFANode *start,
-      NFANode *end,
-      const std::unordered_set<NFANode *> &nodes_manager)
-      : start_(start),
-        end_(end),
-        nodes_(nodes_manager.begin(), nodes_manager.end()) {
+  NFA(NFANode *start, const std::unordered_set<NFANode *> &nodes_manager)
+      : start_(start), nodes_(nodes_manager.begin(), nodes_manager.end()) {
     NumberNodes();
   }
 
   ~NFA() {
-    delete start_;
-    delete end_;
+    start_ = nullptr;
     for (auto node : nodes_) {
       delete node;
     }
@@ -367,10 +364,6 @@ public:
 
   const NFANode *start() const {
     return start_;
-  }
-
-  const NFANode *end() const {
-    return end_;
   }
 
   size_t size() const {
@@ -390,7 +383,6 @@ private:
 
 private:
   NFANode *start_{nullptr};
-  NFANode *end_{nullptr};
   std::vector<NFANode *> nodes_;
 };
 

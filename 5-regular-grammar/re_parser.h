@@ -14,8 +14,13 @@ namespace regular_expression {
 
 class REParser {
 public:
-  static DFA *Parse(const char *beg, const char *end);
-  static DFA *Parse(const std::string &s);
+  static DFA *ParseToDFA(const char *beg, const char *end);
+
+  static DFA *ParseToDFA(const std::string &s);
+
+  static NFAComponent *ParseToNFAComponent(const char *beg, const char *end);
+
+  static NFAComponent *ParseToNFAComponent(const std::string &s);
 
 private:
   REParser(const char *beg, const char *end) : beg_(beg), end_(end) {

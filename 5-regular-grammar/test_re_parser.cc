@@ -19,7 +19,7 @@ using namespace regular_expression;
 BaseLogger logger;
 
 TEST_CASE("concatenate simple string", "[Concatenate]") {
-  shared_ptr<DFA> dfa{REParser::Parse("abcd")};
+  shared_ptr<DFA> dfa{REParser::ParseToDFA("abcd")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("abcd"));
@@ -32,7 +32,7 @@ TEST_CASE("concatenate simple string", "[Concatenate]") {
 }
 
 TEST_CASE("union simple", "[Union]") {
-  shared_ptr<DFA> dfa{REParser::Parse("ab|xy|01")};
+  shared_ptr<DFA> dfa{REParser::ParseToDFA("ab|xy|01")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("ab"));
@@ -48,7 +48,7 @@ TEST_CASE("union simple", "[Union]") {
 }
 
 TEST_CASE("concatenate postfix", "[Postfix]") {
-  shared_ptr<DFA> dfa{REParser::Parse("ab*c+d?e")};
+  shared_ptr<DFA> dfa{REParser::ParseToDFA("ab*c+d?e")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("ace"));
@@ -65,7 +65,7 @@ TEST_CASE("concatenate postfix", "[Postfix]") {
 
 
 TEST_CASE("union postfix", "[Postfix]") {
-  shared_ptr<DFA> dfa {REParser::Parse("a*b+|c?d")};
+  shared_ptr<DFA> dfa {REParser::ParseToDFA("a*b+|c?d")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("ab"));
@@ -84,7 +84,7 @@ TEST_CASE("union postfix", "[Postfix]") {
 }
 
 TEST_CASE("group", "[Group]") {
-  shared_ptr<DFA> dfa {REParser::Parse("(a|b)*X|H(1|2+)?")};
+  shared_ptr<DFA> dfa {REParser::ParseToDFA("(a|b)*X|H(1|2+)?")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("aaaX"));
@@ -106,7 +106,7 @@ TEST_CASE("group", "[Group]") {
 }
 
 TEST_CASE("set", "[Set]") {
-  shared_ptr<DFA> dfa {REParser::Parse("[abc]+X[0-9]?[a-zH0-9]+")};
+  shared_ptr<DFA> dfa {REParser::ParseToDFA("[abc]+X[0-9]?[a-zH0-9]+")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("bX9aH9"));
@@ -122,7 +122,7 @@ TEST_CASE("set", "[Set]") {
 }
 
 TEST_CASE("meta char", "[MetaChar]") {
-  shared_ptr<DFA> dfa {REParser::Parse("\\d\\s\\w\\W\\\\")};
+  shared_ptr<DFA> dfa {REParser::ParseToDFA("\\d\\s\\w\\W\\\\")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("0\t_@\\"));

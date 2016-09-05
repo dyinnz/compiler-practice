@@ -9,6 +9,7 @@
 #include "simplelogger.h"
 #include "finite_automaton.h"
 #include "re_parser.h"
+#include "tokenizer.h"
 
 using namespace std;
 using namespace simple_logger;
@@ -17,18 +18,26 @@ using namespace regular_expression;
 BaseLogger logger;
 
 void Example() {
-  shared_ptr<DFA> dfa {REParser::Parse("\\d+@(\\w+\\.)+\\w+")};
+  shared_ptr<DFA> dfa {REParser::ParseToDFA("\\d+@(\\w+\\.)+(com|cn)")};
 
   PrintDFA(dfa.get());
 
-  cout << dfa->Match("527621747@test.qq.com") << endl;
+  cout << dfa->Match("527621747@test.qq.cn") << endl;
   cout << dfa->Match("ml_143@test.qq.com") << endl;
 }
+
+
+void TEST_Tokenizer() {
+  Tokenizer tokenizer;
+  tokenizer.BuildTokenizer("110", "[0123]+");
+}
+
 
 int main() {
   logger.set_log_level(kDebug);
 
   Example();
+  TEST_Tokenizer();
 
   return 0;
 }

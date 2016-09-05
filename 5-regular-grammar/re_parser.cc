@@ -15,7 +15,7 @@ namespace regular_expression {
  * class REParser
  */
 
-DFA *REParser::Parse(const char *beg, const char *end) {
+DFA *REParser::ParseToDFA(const char *beg, const char *end) {
   REParser parser(beg, end);
 
   NFA *nfa = parser.ParseUnion(beg)->BuildNFA();
@@ -31,8 +31,18 @@ DFA *REParser::Parse(const char *beg, const char *end) {
 }
 
 
-DFA *REParser::Parse(const std::string &s) {
-  return Parse(s.c_str(), s.c_str()+s.length());
+DFA *REParser::ParseToDFA(const std::string &s) {
+  return ParseToDFA(s.c_str(), s.c_str() + s.length());
+}
+
+
+NFAComponent *REParser::ParseToNFAComponent(const char *beg, const char *end) {
+  return REParser(beg, end).ParseUnion(beg);
+}
+
+
+NFAComponent *REParser::ParseToNFAComponent(const string &s) {
+  return ParseToNFAComponent(s.c_str(), s.c_str() + s.length());
 }
 
 
@@ -115,7 +125,7 @@ NFAComponent *REParser::ParseBasic(const char *&p) {
 
     case '.': {
       auto edge = new NFAEdge;
-      edge->SetAll();
+      edge->set();
       result = NFAComponent::CreateFromEdge(edge);
       p += 1;
     }
