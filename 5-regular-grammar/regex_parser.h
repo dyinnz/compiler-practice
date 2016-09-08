@@ -12,19 +12,19 @@ namespace regular_expression {
  * Regular Expression Parser
  */
 
-class REParser {
+class RegexParser {
 public:
-  static DFA *ParseToDFA(const char *beg, const char *end);
+  RegexParser(
+      std::shared_ptr<NFAManager> nfa_manager = std::make_shared<NFAManager>())
+      : nfa_manager_(nfa_manager) {}
 
-  static DFA *ParseToDFA(const std::string &s);
+  std::shared_ptr<DFA> ParseToDFA(const char *beg, const char *end);
 
-  static NFAComponent *ParseToNFAComponent(const char *beg, const char *end);
+  std::shared_ptr<DFA> ParseToDFA(const std::string &s);
 
-  static NFAComponent *ParseToNFAComponent(const std::string &s);
+  NFAComponent *ParseToNFAComponent(const char *beg, const char *end);
 
-private:
-  REParser(const char *beg, const char *end) : beg_(beg), end_(end) {
-  }
+  NFAComponent *ParseToNFAComponent(const std::string &s);
 
   NFAComponent *ParseUnion(const char *&p);
 
@@ -43,6 +43,7 @@ private:
 private:
   const char *beg_{nullptr};
   const char *end_{nullptr};
+  std::shared_ptr<NFAManager> nfa_manager_;
 };
 
 

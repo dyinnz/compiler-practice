@@ -8,7 +8,7 @@
 #include "catch.hpp"
 
 #include "finite_automaton.h"
-#include "re_parser.h"
+#include "regex_parser.h"
 #include "simplelogger.h"
 
 using std::shared_ptr;
@@ -19,7 +19,8 @@ using namespace regular_expression;
 BaseLogger logger;
 
 TEST_CASE("concatenate simple string", "[Concatenate]") {
-  shared_ptr<DFA> dfa{REParser::ParseToDFA("abcd")};
+  RegexParser re_parser;
+  shared_ptr<DFA> dfa{re_parser.ParseToDFA("abcd")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("abcd"));
@@ -32,7 +33,8 @@ TEST_CASE("concatenate simple string", "[Concatenate]") {
 }
 
 TEST_CASE("union simple", "[Union]") {
-  shared_ptr<DFA> dfa{REParser::ParseToDFA("ab|xy|01")};
+  RegexParser re_parser;
+  shared_ptr<DFA> dfa{re_parser.ParseToDFA("ab|xy|01")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("ab"));
@@ -48,7 +50,8 @@ TEST_CASE("union simple", "[Union]") {
 }
 
 TEST_CASE("concatenate postfix", "[Postfix]") {
-  shared_ptr<DFA> dfa{REParser::ParseToDFA("ab*c+d?e")};
+  RegexParser re_parser;
+  shared_ptr<DFA> dfa{re_parser.ParseToDFA("ab*c+d?e")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("ace"));
@@ -65,7 +68,8 @@ TEST_CASE("concatenate postfix", "[Postfix]") {
 
 
 TEST_CASE("union postfix", "[Postfix]") {
-  shared_ptr<DFA> dfa {REParser::ParseToDFA("a*b+|c?d")};
+  RegexParser re_parser;
+  shared_ptr<DFA> dfa {re_parser.ParseToDFA("a*b+|c?d")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("ab"));
@@ -84,7 +88,8 @@ TEST_CASE("union postfix", "[Postfix]") {
 }
 
 TEST_CASE("group", "[Group]") {
-  shared_ptr<DFA> dfa {REParser::ParseToDFA("(a|b)*X|H(1|2+)?")};
+  RegexParser re_parser;
+  shared_ptr<DFA> dfa {re_parser.ParseToDFA("(a|b)*X|H(1|2+)?")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("aaaX"));
@@ -106,7 +111,8 @@ TEST_CASE("group", "[Group]") {
 }
 
 TEST_CASE("set", "[Set]") {
-  shared_ptr<DFA> dfa {REParser::ParseToDFA("[abc]+X[0-9]?[a-zH0-9]+")};
+  RegexParser re_parser;
+  shared_ptr<DFA> dfa {re_parser.ParseToDFA("[abc]+X[0-9]?[a-zH0-9]+")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("bX9aH9"));
@@ -122,7 +128,8 @@ TEST_CASE("set", "[Set]") {
 }
 
 TEST_CASE("meta char", "[MetaChar]") {
-  shared_ptr<DFA> dfa {REParser::ParseToDFA("\\d\\s\\w\\W\\\\")};
+  RegexParser re_parser;
+  shared_ptr<DFA> dfa {re_parser.ParseToDFA("\\d\\s\\w\\W\\\\")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("0\t_@\\"));

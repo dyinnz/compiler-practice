@@ -5,7 +5,7 @@
 #pragma once
 
 #include "finite_automaton.h"
-#include "re_parser.h"
+#include "regex_parser.h"
 
 using namespace regular_expression;
 

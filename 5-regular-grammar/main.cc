@@ -8,7 +8,7 @@
 #include <iostream>
 #include "simplelogger.h"
 #include "finite_automaton.h"
-#include "re_parser.h"
+#include "regex_parser.h"
 #include "tokenizer.h"
 
 using namespace std;
@@ -18,7 +18,7 @@ using namespace regular_expression;
 BaseLogger logger;
 
 void Example() {
-  shared_ptr<DFA> dfa {REParser::ParseToDFA("\\d+@(\\w+\\.)+(com|cn)")};
+  shared_ptr<DFA> dfa {RegexParser::ParseToDFA("\\d+@(\\w+\\.)+(com|cn)")};
 
   PrintDFA(dfa.get());
 
@@ -38,6 +38,9 @@ int main() {
 
   Example();
   TEST_Tokenizer();
+
+  // Node node(Node::kStart);
+  NFANode nfaNode(Node::kStart);
 
   return 0;
 }

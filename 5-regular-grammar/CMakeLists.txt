@@ -7,10 +7,10 @@ include_directories(${CommonInclude})
 add_executable(main
         main.cc
         finite_automaton.cc
-        re_parser.cc
+        regex_parser.cc
         tokenizer.cc)
 
-add_executable(test_re_parser
-        test_re_parser.cc
+add_executable(test_regex_parser
+        test_regex_parser.cc
         finite_automaton.cc
-        re_parser.cc)
+        regex_parser.cc)

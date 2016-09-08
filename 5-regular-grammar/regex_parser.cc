@@ -3,9 +3,10 @@
 //
 
 #include "simplelogger.h"
-#include "re_parser.h"
+#include "regex_parser.h"
 
 using std::string;
+using std::shared_ptr;
 
 extern simple_logger::BaseLogger logger;
 
@@ -15,38 +16,41 @@ namespace regular_expression {
  * class REParser
  */
 
-DFA *REParser::ParseToDFA(const char *beg, const char *end) {
-  REParser parser(beg, end);
+shared_ptr<DFA> RegexParser::ParseToDFA(const char *beg, const char *end) {
+  beg_ = beg;
+  end_ = end;
 
-  NFA *nfa = parser.ParseUnion(beg)->BuildNFA();
+  auto nfa = nfa_manager_->BuildNFA(ParseUnion(beg));
   // PrintNFA(nfa->start(), nfa->size());
 
-  DFA *normal = ConvertNFAToDFA(nfa);
+  auto normal = ConvertNFAToDFA(nfa);
   // PrintDFA(normal->start(), normal->size());
 
-  DFA *minimum = MinimizeDFA(normal);
+  auto minimum = MinimizeDFA(normal);
   // PrintDFA(minimum->start(), minimum->size());
 
   return minimum;
 }
 
 
-DFA *REParser::ParseToDFA(const std::string &s) {
+shared_ptr<DFA> RegexParser::ParseToDFA(const std::string &s) {
   return ParseToDFA(s.c_str(), s.c_str() + s.length());
 }
 
 
-NFAComponent *REParser::ParseToNFAComponent(const char *beg, const char *end) {
-  return REParser(beg, end).ParseUnion(beg);
+NFAComponent *RegexParser::ParseToNFAComponent(const char *beg, const char *end) {
+  beg_ = beg;
+  end_ = end;
+  return ParseUnion(beg);
 }
 
 
-NFAComponent *REParser::ParseToNFAComponent(const string &s) {
+NFAComponent *RegexParser::ParseToNFAComponent(const string &s) {
   return ParseToNFAComponent(s.c_str(), s.c_str() + s.length());
 }
 
 
-NFAComponent *REParser::ParseUnion(const char *&p) {
+NFAComponent *RegexParser::ParseUnion(const char *&p) {
   if (p >= end_) return nullptr;
 
   NFAComponent *result{nullptr};
@@ -55,13 +59,12 @@ NFAComponent *REParser::ParseUnion(const char *&p) {
     NFAComponent *current = ParseConcatenate(p);
 
     if (result && current) {
-      result = Union(current, result);
+      result = nfa_manager_->Union(current, result);
 
     } else if (!result && current) {
       result = current;
 
     } else {
-      delete result;
       return nullptr;
     }
 
@@ -74,7 +77,6 @@ NFAComponent *REParser::ParseUnion(const char *&p) {
 
     } else {
       logger.error("{}(): unexpected end.", __func__);
-      delete result;
       return nullptr;
     }
   }
@@ -83,7 +85,7 @@ NFAComponent *REParser::ParseUnion(const char *&p) {
 }
 
 
-NFAComponent *REParser::ParseConcatenate(const char *&p) {
+NFAComponent *RegexParser::ParseConcatenate(const char *&p) {
   assert(p < end_);
 
   NFAComponent *result{nullptr};
@@ -92,7 +94,7 @@ NFAComponent *REParser::ParseConcatenate(const char *&p) {
     NFAComponent *current = ParseBasic(p);
 
     if (result && current) {
-      result = Concatenate(result, current);
+      result = nfa_manager_->Concatenate(result, current);
 
     } else if (!result && current) {
       result = current;
@@ -109,7 +111,7 @@ NFAComponent *REParser::ParseConcatenate(const char *&p) {
   return result;
 }
 
-NFAComponent *REParser::ParseBasic(const char *&p) {
+NFAComponent *RegexParser::ParseBasic(const char *&p) {
   assert(p < end_);
 
   NFAComponent *result{nullptr};
@@ -124,9 +126,9 @@ NFAComponent *REParser::ParseBasic(const char *&p) {
       break;
 
     case '.': {
-      auto edge = new NFAEdge;
+      auto edge = nfa_manager_->CreateEdge();
       edge->set();
-      result = NFAComponent::CreateFromEdge(edge);
+      result = nfa_manager_->CreateCompFromEdge(edge);
       p += 1;
     }
       break;
@@ -137,24 +139,24 @@ NFAComponent *REParser::ParseBasic(const char *&p) {
 
     default:
       // char
-      result = NFAComponent::CreateFromChar(*p);
+      result = nfa_manager_->CreateCompFromChar(*p);
       p += 1;
       break;
   }
 
   switch (*p) {
     case '*':
-      result = KleenStar(result);
+      result = nfa_manager_->KleenStar(result);
       p += 1;
       break;
 
     case '+':
-      result = LeastOne(result);
+      result = nfa_manager_->LeastOne(result);
       p += 1;
       break;
 
     case '?':
-      result = Optional(result);
+      result = nfa_manager_->Optional(result);
       p += 1;
 
     default:
@@ -165,7 +167,7 @@ NFAComponent *REParser::ParseBasic(const char *&p) {
 }
 
 
-NFAComponent *REParser::ParseGroup(const char *&p) {
+NFAComponent *RegexParser::ParseGroup(const char *&p) {
   assert(p < end_);
   assert('(' == *p);
   p += 1;
@@ -175,7 +177,6 @@ NFAComponent *REParser::ParseGroup(const char *&p) {
   if (')' != *p) {
     logger.debug("{}(): {}", __func__, p);
     logger.error("{}(): right parenthesis dismatch", __func__);
-    delete result;
     return nullptr;
   }
 
@@ -184,20 +185,20 @@ NFAComponent *REParser::ParseGroup(const char *&p) {
 }
 
 
-NFAComponent *REParser::ParseString(const char *&p) {
+NFAComponent *RegexParser::ParseString(const char *&p) {
   // TODO
   assert(false);
   return nullptr;
 }
 
 
-NFAComponent *REParser::ParseEscape(const char *&p) {
+NFAComponent *RegexParser::ParseEscape(const char *&p) {
   assert(p < end_);
   assert(*p == '\\');
   p += 1;
 
   NFAComponent *result = 0;
-  result = NFAComponent::CreateFromChar(*p);
+  result = nfa_manager_->CreateCompFromChar(*p);
 
   switch (*p) {
     case '\\':
@@ -210,55 +211,54 @@ NFAComponent *REParser::ParseEscape(const char *&p) {
     case '[':
     case ']':
     case '|':
-      result = NFAComponent::CreateFromChar(*p);
+      result = nfa_manager_->CreateCompFromChar(*p);
       break;
 
     case 'd':
-      result = NFAComponent::CreateFromRange('0', '9' + 1);
+      result = nfa_manager_->CreateCompFromRange('0', '9' + 1);
       break;
 
     case 'D': {
-      auto edge = NFAEdge::CreateFromRange('0', '9' + 1);
+      auto edge = nfa_manager_->CreateEdge('0', '9' + 1);
       edge->flip();
-      result = NFAComponent::CreateFromEdge(edge);
+      result = nfa_manager_->CreateCompFromEdge(edge);
     }
       break;
 
     case 's':
-      result = NFAComponent::CreateFromString(" \f\n\r\t\v");
+      result = nfa_manager_->CreateCompFromString(" \f\n\r\t\v");
       break;
 
     case 'S': {
-      auto edge = NFAEdge::CreateFromString(" \f\n\r\t\v");
+      auto edge = nfa_manager_->CreateEdge(" \f\n\r\t\v");
       edge->flip();
-      result = NFAComponent::CreateFromEdge(edge);
+      result = nfa_manager_->CreateCompFromEdge(edge);
     }
       break;
 
     case 'w': {
-      auto edge = new NFAEdge;
+      auto edge = nfa_manager_->CreateEdge();
       edge->SetRange('a', 'z' + 1);
       edge->SetRange('A', 'Z' + 1);
       edge->SetRange('0', '9' + 1);
       edge->set('_');
-      result = NFAComponent::CreateFromEdge(edge);
+      result = nfa_manager_->CreateCompFromEdge(edge);
     }
       break;
 
     case 'W': {
-      auto edge = new NFAEdge;
+      auto edge = nfa_manager_->CreateEdge();
       edge->SetRange('a', 'z' + 1);
       edge->SetRange('A', 'Z' + 1);
       edge->SetRange('0', '9' + 1);
       edge->set('_');
       edge->flip();
-      result = NFAComponent::CreateFromEdge(edge);
+      result = nfa_manager_->CreateCompFromEdge(edge);
     }
       break;
 
     default:
       logger.error("{}(): unrecognized escape char {}", __func__, int(*p));
-      delete result;
       return nullptr;
   }
 
@@ -266,7 +266,7 @@ NFAComponent *REParser::ParseEscape(const char *&p) {
   return result;
 }
 
-NFAComponent *REParser::ParseSet(const char *&p) {
+NFAComponent *RegexParser::ParseSet(const char *&p) {
   assert(p < end_);
   assert('[' == *p);
   p += 1;
@@ -276,7 +276,7 @@ NFAComponent *REParser::ParseSet(const char *&p) {
     p += 1;
   }
 
-  NFAEdge *edge = new NFAEdge;
+  NFAEdge *edge = nfa_manager_->CreateEdge();
   for (; p < end_ && ']' != *p; ++p) {
     if ('-' != *p) {
       edge->set(*p);
@@ -287,7 +287,6 @@ NFAComponent *REParser::ParseSet(const char *&p) {
 
       } else {
         logger.error("{}(): wrong range", __func__);
-        delete edge;
         return nullptr;
       }
     }
@@ -298,11 +297,10 @@ NFAComponent *REParser::ParseSet(const char *&p) {
   }
 
   if (']' != *p) {
-    delete edge;
     return nullptr;
   }
   p += 1;
-  NFAComponent *result = NFAComponent::CreateFromEdge(edge);
+  NFAComponent *result = nfa_manager_->CreateCompFromEdge(edge);
   return result;
 }
 

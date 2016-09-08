@@ -20,6 +20,7 @@
 #include <unordered_map>
 
 #include "utility.h"
+#include "mem_manager.h"
 
 /*----------------------------------------------------------------------------*/
 
@@ -39,11 +40,21 @@ class DFANode;
 
 class NFAComponent;
 
+class NFAManager;
+
 class NFA;
 
 class NumberSet;
 
 class DFA;
+
+
+/**
+ * type definition
+ */
+typedef SmallObjPool<NFAEdge> NFAEdgeManager;
+typedef SmallObjPool<NFANode> NFANodeManager;
+typedef SmallObjPool<NFAComponent> NFACompManager;
 
 
 /**
@@ -67,40 +78,17 @@ void PrintDFA(const DFA *dfa);
 
 
 /**
- * Auxiliary functions for composing
- */
-
-NFAComponent *Concatenate(NFAComponent *lhs, NFAComponent *rhs);
-
-template<class ...A>
-NFAComponent *Concatenate(NFAComponent *first, A... rest);
-
-NFAComponent *Union(NFAComponent *lhs, NFAComponent *rhs);
-
-template<class ...A>
-NFAComponent *Union(NFAComponent *first, A... rest);
-
-NFAComponent *KleenStar(NFAComponent *nfa);
-
-NFAComponent *Optional(NFAComponent *nfa);
-
-NFAComponent *LeastOne(NFAComponent *nfa);
-
-NFA *UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs);
-
-
-/**
  * @param normal    the DFA to be minimized
  * @return          the minimum DFA, may be the same one if the parameter has
  *                  already minimum DFA
  */
-DFA *MinimizeDFA(const DFA *normal);
+std::shared_ptr<DFA> MinimizeDFA(const std::shared_ptr<DFA> normal);
 
 /**
  * @param nfa   the NFA to be converted
  * @return      the DFA convert from NFA
  */
-DFA *ConvertNFAToDFA(const NFA *nfa);
+std::shared_ptr<DFA> ConvertNFAToDFA(const NFA *nfa);
 
 
 /*----------------------------------------------------------------------------*/
@@ -112,17 +100,18 @@ class NFAEdge {
 public:
   typedef std::bitset<CHAR_MAX + 1> CharMasks;
 
-  static NFAEdge *CreateEpsilon() {
-    return new NFAEdge;
+  NFAEdge() = default;
+
+  NFAEdge(char c) {
+    set(c);
   }
 
-  static NFAEdge *CreateFromChar(char c);
+  NFAEdge(char beg, char end) {
+    SetRange(beg, end);
+  }
 
-  static NFAEdge *CreateFromRange(char beg, char end);
+  NFAEdge(const std::string &s);
 
-  static NFAEdge *CreateFromString(const std::string &s);
-
-public:
   NFANode *next_node() {
     return next_node_;
   }
@@ -180,11 +169,10 @@ public:
 
   constexpr static int kUnsetInt{-1};
 
-public:
+protected:
   Node(State state) : state_(state) {}
 
-  virtual ~Node() = 0;
-
+public:
   int type() const {
     return type_;
   }
@@ -235,12 +223,6 @@ class NFANode : public Node {
 public:
   NFANode(State state) : Node(state) {}
 
-  virtual ~NFANode() {
-    for (auto edge : edges_) {
-      delete edge;
-    }
-  }
-
   const std::list<NFAEdge *> &edges() const {
     return edges_;
   }
@@ -267,8 +249,6 @@ private:
 class DFANode : public Node {
 public:
   DFANode(State state) : Node(state) {}
-
-  virtual ~DFANode() {}
 
   const std::unordered_map<char, DFANode *> &edges() const {
     return edges_;
@@ -299,26 +279,11 @@ private:
  */
 class NFAComponent {
 public:
-  static NFAComponent *CreateFromEdge(NFAEdge *e);
-
-  static NFAComponent *CreateFromChar(char c);
-
-  static NFAComponent *CreateFromRange(char beg, char end);
-
-  static NFAComponent *CreateFromString(const std::string &s);
-
-public:
   NFAComponent(NFANode *start, NFAEdge *e, NFANode *end)
       : start_(start), end_(end) {
+    assert(start->IsStart());
+    assert(end->IsEnd());
     start_->AddEdge(e, end_);
-    nodes_manager_.insert(start);
-    nodes_manager_.insert(end);
-  }
-
-  ~NFAComponent() {
-    for (auto node : nodes_manager_) {
-      delete node;
-    }
   }
 
   NFANode *start() {
@@ -337,18 +302,81 @@ public:
 
   NFANode *RemoveEnd();
 
-  void FetchNodes(NFAComponent *nfa) {
-    nodes_manager_.insert(nfa->nodes_manager_.begin(),
-                          nfa->nodes_manager_.end());
-    nfa->nodes_manager_.clear();
-  }
-
-  NFA *BuildNFA();
-
 private:
   NFANode *start_{nullptr};
   NFANode *end_{nullptr};
-  std::unordered_set<NFANode *> nodes_manager_;
+};
+
+
+class NFAManager : SmallObjPool<NFA> {
+public:
+  NFAEdgeManager &edge_manager() {
+    return edge_manager_;
+  }
+
+  NFANodeManager &node_manager() {
+    return node_manager_;
+  }
+
+  NFACompManager &comp_manager() {
+    return comp_manager_;
+  }
+
+  template<class... A>
+  NFAEdge *CreateEdge(A &&... args) {
+    return edge_manager_.Create(std::forward<A>(args)...);
+  }
+
+  template<class... A>
+  NFANode *CreateNode(A &&... args) {
+    return node_manager_.Create(std::forward<A>(args)...);
+  }
+
+  template<class... A>
+  NFAComponent *CreateComponent(A&&... args) {
+    return comp_manager_.Create(std::forward<A>(args)...);
+  }
+
+  NFAComponent *CreateCompFromEdge(NFAEdge *e) {
+    return CreateComponent(CreateNode(Node::kStart), e, CreateNode(Node::kEnd));
+  }
+
+  NFAComponent *CreateCompFromChar(char c) {
+    return CreateCompFromEdge(CreateEdge(c));
+  }
+
+  NFAComponent *CreateCompFromRange(char beg, char end) {
+    return CreateCompFromEdge(CreateEdge(beg, end));
+  }
+
+  NFAComponent *CreateCompFromString(const std::string &s) {
+    return CreateCompFromEdge(CreateEdge(s));
+  }
+
+  NFAComponent *Concatenate(NFAComponent *lhs, NFAComponent *rhs);
+
+  template<class ...A>
+  NFAComponent *Concatenate(NFAComponent *first, A... rest);
+
+  NFAComponent *Union(NFAComponent *lhs, NFAComponent *rhs);
+
+  template<class ...A>
+  NFAComponent *Union(NFAComponent *first, A... rest);
+
+  NFAComponent *KleenStar(NFAComponent *nfa);
+
+  NFAComponent *Optional(NFAComponent *nfa);
+
+  NFAComponent *LeastOne(NFAComponent *nfa);
+
+  NFA* BuildNFA(NFAComponent *comp);
+
+  NFA* UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs);
+
+private:
+  NFAEdgeManager edge_manager_;
+  NFANodeManager node_manager_;
+  NFACompManager comp_manager_;
 };
 
 
@@ -359,17 +387,7 @@ private:
  */
 class NFA {
 public:
-  NFA(NFANode *start, const std::unordered_set<NFANode *> &nodes_manager)
-      : start_(start), nodes_(nodes_manager.begin(), nodes_manager.end()) {
-    NumberNodes();
-  }
-
-  ~NFA() {
-    start_ = nullptr;
-    for (auto node : nodes_) {
-      delete node;
-    }
-  }
+  NFA(NFANode *start);
 
   bool Match(const char *beg, const char *end) const;
 
@@ -388,7 +406,7 @@ public:
   }
 
 private:
-  void NumberNodes();
+  void CollectNodes(NFANode *start, std::unordered_set<NFANode*> &visits);
 
   const char *MatchDFS(NFANode *curr, const char *beg, const char *end) const;
 
@@ -463,14 +481,17 @@ inline bool operator!=(const NumberSet &lhs, const NumberSet &rhs) {
  */
 class DFA {
 public:
-  static DFA *ConvertFromNFA(NFA *nfa);
-
-public:
   DFA(DFANode *start,
       std::vector<DFANode *> &&ends,
       std::vector<DFANode *> &&nodes)
       : start_(start), ends_(std::move(ends)), nodes_(std::move(nodes)) {
     NumberNode();
+  }
+
+  ~DFA() {
+    for (auto node : nodes_) {
+      delete node;
+    }
   }
 
   size_t size() const {
@@ -506,7 +527,7 @@ private:
 /*----------------------------------------------------------------------------*/
 
 template<class ...A>
-NFAComponent *Concatenate(NFAComponent *first, A... rest) {
+NFAComponent *NFAManager::Concatenate(NFAComponent *first, A... rest) {
   if (0 == sizeof...(rest)) {
     return first;
   } else {
@@ -516,7 +537,7 @@ NFAComponent *Concatenate(NFAComponent *first, A... rest) {
 }
 
 template<class ...A>
-NFAComponent *Union(NFAComponent *first, A... rest) {
+NFAComponent *NFAManager::Union(NFAComponent *first, A... rest) {
   if (0 == sizeof...(rest)) {
     return first;
   } else {
