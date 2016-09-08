@@ -18,7 +18,8 @@ using namespace regular_expression;
 BaseLogger logger;
 
 void Example() {
-  shared_ptr<DFA> dfa {RegexParser::ParseToDFA("\\d+@(\\w+\\.)+(com|cn)")};
+  RegexParser re_parser;
+  shared_ptr<DFA> dfa {re_parser.ParseToDFA("\\d+@(\\w+\\.)+(com|cn)")};
 
   PrintDFA(dfa.get());
 
