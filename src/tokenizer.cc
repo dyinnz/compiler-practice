@@ -3,24 +3,40 @@
 //
 
 #include "tokenizer.h"
+#include "simplelogger.h"
 
-void Tokenizer::BuildTokenizer(const std::string &lhs,
-                               const std::string &rhs) {
-  /*
-  NFAManager nfa_manager_;
+extern simple_logger::BaseLogger logger;
 
-  NFAComponent *lhs_comp = RegexParser::ParseToNFAComponent(lhs);
-  lhs_comp->end()->set_type(0);
 
-  NFAComponent *rhs_comp = RegexParser::ParseToNFAComponent(rhs);
-  rhs_comp->end()->set_type(1);
+void Tokenizer::BuildTokenizer(const std::vector<std::string> &rules) {
+  RegexParser re_parser;
+  NFAComponent *result_comp = nullptr;
+  ResetLabel();
 
-  std::cout << __func__ << " " << lhs_comp << " " << rhs_comp << std::endl;
+  for (auto &s : rules) {
+    NFAComponent *comp = re_parser.ParseToNFAComponent(s);
+    if (!comp) {
+      logger.error("{}(): nullptr NFAComponent pointer", __func__);
+      return;
+    }
 
-  auto token_nfa = nfa_manager_.UnionWithMultiEnd(lhs_comp, rhs_comp);
+    comp->end()->set_type(NextLabel());
+
+    if (result_comp) {
+      result_comp = re_parser.GetNFAManager().UnionWithMultiEnd(result_comp,
+                                                                comp);
+    } else {
+      result_comp = comp;
+    }
+  }
+
+  auto token_nfa = re_parser.GetNFAManager().BuildNFA(result_comp);
   PrintNFA(token_nfa);
-  */
 
-  // DFA* token_dfa = ConvertNFAToDFA(token_nfa);
-  // PrintDFA(token_dfa);
+  auto normal_dfa = ConvertNFAToDFA(token_nfa);
+  PrintDFA(normal_dfa.get());
+
+  token_dfa_ = normal_dfa;
+
+  logger.log("finish build");
 }

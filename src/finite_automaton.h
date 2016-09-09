@@ -10,6 +10,7 @@
 #include <climits>
 #include <cassert>
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <bitset>
@@ -333,7 +334,7 @@ public:
   }
 
   template<class... A>
-  NFAComponent *CreateComponent(A&&... args) {
+  NFAComponent *CreateComponent(A &&... args) {
     return comp_manager_.Create(std::forward<A>(args)...);
   }
 
@@ -369,9 +370,12 @@ public:
 
   NFAComponent *LeastOne(NFAComponent *nfa);
 
-  NFA* BuildNFA(NFAComponent *comp);
+  NFAComponent *UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs);
 
-  NFA* UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs);
+  template<class ...A>
+  NFAComponent *UnionWithMultiEnd(NFAComponent *first, A... rest);
+
+  NFA *BuildNFA(NFAComponent *comp);
 
 private:
   NFAEdgeManager edge_manager_;
@@ -406,7 +410,7 @@ public:
   }
 
 private:
-  void CollectNodes(NFANode *start, std::unordered_set<NFANode*> &visits);
+  void CollectNodes(NFANode *start, std::unordered_set<NFANode *> &visits);
 
   const char *MatchDFS(NFANode *curr, const char *beg, const char *end) const;
 
@@ -489,7 +493,7 @@ public:
   }
 
   ~DFA() {
-    for (auto node : nodes_) {
+    for (DFANode* node : nodes_) {
       delete node;
     }
   }
@@ -543,6 +547,17 @@ NFAComponent *NFAManager::Union(NFAComponent *first, A... rest) {
   } else {
     NFAComponent *rest_result = Union(rest...);
     return Union(first, rest_result);
+  }
+}
+
+
+template<class ...A>
+NFAComponent *NFAManager::UnionWithMultiEnd(NFAComponent *first, A... rest) {
+  if (0 == sizeof...(rest)) {
+    return first;
+  } else {
+    NFAComponent *rest_result = UnionWithMultiEnd(rest...);
+    return UnionWithMultiEnd(first, rest_result);
   }
 }
 

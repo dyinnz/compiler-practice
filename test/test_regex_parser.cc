@@ -69,7 +69,7 @@ TEST_CASE("concatenate postfix", "[Postfix]") {
 
 TEST_CASE("union postfix", "[Postfix]") {
   RegexParser re_parser;
-  shared_ptr<DFA> dfa {re_parser.ParseToDFA("a*b+|c?d")};
+  shared_ptr<DFA> dfa{re_parser.ParseToDFA("a*b+|c?d")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("ab"));
@@ -89,7 +89,7 @@ TEST_CASE("union postfix", "[Postfix]") {
 
 TEST_CASE("group", "[Group]") {
   RegexParser re_parser;
-  shared_ptr<DFA> dfa {re_parser.ParseToDFA("(a|b)*X|H(1|2+)?")};
+  shared_ptr<DFA> dfa{re_parser.ParseToDFA("(a|b)*X|H(1|2+)?")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("aaaX"));
@@ -112,7 +112,7 @@ TEST_CASE("group", "[Group]") {
 
 TEST_CASE("set", "[Set]") {
   RegexParser re_parser;
-  shared_ptr<DFA> dfa {re_parser.ParseToDFA("[abc]+X[0-9]?[a-zH0-9]+")};
+  shared_ptr<DFA> dfa{re_parser.ParseToDFA("[abc]+X[0-9]?[a-zH0-9]+")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("bX9aH9"));
@@ -129,13 +129,13 @@ TEST_CASE("set", "[Set]") {
 
 TEST_CASE("meta char", "[MetaChar]") {
   RegexParser re_parser;
-  shared_ptr<DFA> dfa {re_parser.ParseToDFA("\\d\\s\\w\\W\\\\")};
+  shared_ptr<DFA> dfa{re_parser.ParseToDFA("\\d\\s\\w\\W\\\\")};
 
   SECTION("matched") {
     REQUIRE(dfa->Match("0\t_@\\"));
     REQUIRE(dfa->Match("9\nZ#\\"));
   }
-  
+
   SECTION("unmath") {
     REQUIRE_FALSE(dfa->Match("0\t@@\\"));
     REQUIRE_FALSE(dfa->Match("0\t_@"));

@@ -12,15 +12,24 @@ using namespace regular_expression;
 class Tokenizer {
 public:
   ~Tokenizer() {
-    delete dfa_;
   }
 
-  void BuildTokenizer(const std::string &lhs, const std::string &rhs);
+  void BuildTokenizer(const std::vector<std::string> &rules);
 
-  const DFA *GetDFA() {
-    return dfa_;
+  const DFA *GetTokenDFA() const {
+    return &*token_dfa_;
   }
 
 private:
-  DFA *dfa_ {nullptr};
+  void ResetLabel() {
+    curr_label_ = 0;
+  }
+
+  int NextLabel() {
+    return curr_label_++;
+  }
+
+private:
+  std::shared_ptr<DFA> token_dfa_;
+  int curr_label_;
 };

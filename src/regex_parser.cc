@@ -38,7 +38,8 @@ shared_ptr<DFA> RegexParser::ParseToDFA(const std::string &s) {
 }
 
 
-NFAComponent *RegexParser::ParseToNFAComponent(const char *beg, const char *end) {
+NFAComponent *
+RegexParser::ParseToNFAComponent(const char *beg, const char *end) {
   beg_ = beg;
   end_ = end;
   return ParseUnion(beg);

@@ -19,7 +19,7 @@ BaseLogger logger;
 
 void Example() {
   RegexParser re_parser;
-  shared_ptr<DFA> dfa {re_parser.ParseToDFA("\\d+@(\\w+\\.)+(com|cn)")};
+  shared_ptr<DFA> dfa{re_parser.ParseToDFA("\\d+@(\\w+\\.)+(com|cn)")};
 
   PrintDFA(dfa.get());
 
@@ -37,11 +37,8 @@ void TEST_Tokenizer() {
 int main() {
   logger.set_log_level(kDebug);
 
-  Example();
+  // Example();
   TEST_Tokenizer();
-
-  // Node node(Node::kStart);
-  NFANode nfaNode(Node::kStart);
 
   return 0;
 }

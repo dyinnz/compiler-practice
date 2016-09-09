@@ -28,11 +28,11 @@ struct Chunk {
   }
 
   void Release() {
-    delete [] mem_;
+    delete[] mem_;
     free_num_ = 0;
   }
 
-  void* Allocate(std::size_t block_size) {
+  void *Allocate(std::size_t block_size) {
     if (0 == free_num_) return nullptr;
 
     uint8_t *alloc = mem_ + first_ * block_size;
@@ -127,28 +127,33 @@ private:
 };
 
 
-template <class T, std::uint8_t N = kDefaultBlocksNum>
+template<class T, std::uint8_t N = kDefaultBlocksNum>
 class SmallObjPool {
 public:
-  SmallObjPool() : fixed_alloc_(sizeof(T), N) {
+  SmallObjPool() : fixed_alloc_(sizeof(T), N) { }
+
+  ~SmallObjPool() {
+    Release();
   }
 
-  template <class... A>
-  T* Create(A&&... args) {
-    T* p = static_cast<T*>(fixed_alloc_.Allocate());
-    new (p) T(std::forward<A>(args)...);
+  template<class... A>
+  T *Create(A &&... args) {
+    T *p = static_cast<T *>(fixed_alloc_.Allocate());
+    new(p) T(std::forward<A>(args)...);
+    records_.push_back(p);
     return p;
   }
 
-  void Destroy(T *p) {
-    p->~T();
-    fixed_alloc_.Deallocate(p);
-  }
+  void Destroy(T *p) = delete;
 
   void Release() {
+    for (auto p : records_) {
+      p->~T();
+    }
     fixed_alloc_.Release();
   }
 
 private:
   FixedAllocator fixed_alloc_;
+  std::vector<T*> records_;
 };

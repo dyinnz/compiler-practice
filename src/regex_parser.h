@@ -5,6 +5,7 @@
 #pragma once
 
 #include "finite_automaton.h"
+#include <iostream>
 
 namespace regular_expression {
 
@@ -15,8 +16,14 @@ namespace regular_expression {
 class RegexParser {
 public:
   RegexParser(
-      std::shared_ptr<NFAManager> nfa_manager = std::make_shared<NFAManager>())
-      : nfa_manager_(nfa_manager) {}
+      std::shared_ptr<NFAManager> nfa_manager = nullptr)
+      : nfa_manager_(nfa_manager) {
+    if (!nfa_manager_) {
+      // nfa_manager_ = std::make_shared<NFAManager>();
+      nfa_manager_ = std::shared_ptr<NFAManager>(new NFAManager);
+      std::cout << "NFA Manager: " << nfa_manager_.get() << std::endl;
+    }
+  }
 
   std::shared_ptr<DFA> ParseToDFA(const char *beg, const char *end);
 
@@ -26,6 +33,11 @@ public:
 
   NFAComponent *ParseToNFAComponent(const std::string &s);
 
+  NFAManager &GetNFAManager() {
+    return *nfa_manager_;
+  }
+
+private:
   NFAComponent *ParseUnion(const char *&p);
 
   NFAComponent *ParseConcatenate(const char *&p);

@@ -73,7 +73,7 @@ private:
 
 void DFAConverter::ConversionPreamble() {
   e_closures_.resize(nfa_->size());
-  set_to_dfa_node_.reserve(nfa_->size());
+  // set_to_dfa_node_.reserve(nfa_->size());
 }
 
 
@@ -150,6 +150,8 @@ DFANode *DFAConverter::ConstructDFADiagram() {
           iter = set_to_dfa_node_.insert(
               {adjacent_set, new DFANode(Node::kNormal)}).first;
           q.push(adjacent_set);
+
+          logger.log("new node: {}", iter->second);
         }
         DFANode *dfa_adjacent = iter->second;
 
@@ -215,7 +217,7 @@ shared_ptr<DFA> DFAConverter::Convert() {
   auto ends = CollectEndNodes();
   auto nodes = CollectAllNodes();
 
-  return make_shared<DFA>(start, move(ends), move(nodes));
+  return make_shared<DFA>(start, ends, nodes);
 }
 
 
@@ -226,10 +228,11 @@ shared_ptr<DFA> DFAConverter::Convert() {
  */
 class DFAOptimizer {
 private:
-  friend shared_ptr<DFA> regular_expression::MinimizeDFA(const shared_ptr<DFA> normal);
+  friend shared_ptr<DFA>
+  regular_expression::MinimizeDFA(const shared_ptr<DFA> normal);
 
   DFAOptimizer(const shared_ptr<DFA> normal) : normal_(normal),
-                                    num_to_set_(normal->size()) {}
+                                               num_to_set_(normal->size()) {}
 
   const DFANode *GetNormalNode(int number) {
     return normal_->GetNode(number);
@@ -429,7 +432,8 @@ shared_ptr<DFA> DFAOptimizer::ConstructFromSets() {
     }
   }
 
-  return make_shared<DFA>(start, move(ends), move(nodes));
+  // return make_shared<DFA>(start, move(ends), move(nodes));
+  return make_shared<DFA>(start, ends, nodes);
 }
 
 
@@ -596,7 +600,7 @@ NFAComponent *NFAManager::Union(NFAComponent *lhs, NFAComponent *rhs) {
 }
 
 
-NFAComponent * NFAManager::KleenStar(NFAComponent *nfa) {
+NFAComponent *NFAManager::KleenStar(NFAComponent *nfa) {
   NFANode *old_start = nfa->SetNewStart(CreateNode(Node::kStart));
   NFANode *old_end = nfa->SetNewEnd(CreateNode(Node::kEnd));
 
@@ -626,12 +630,7 @@ NFAComponent *NFAManager::LeastOne(NFAComponent *nfa) {
 }
 
 
-NFA* NFAManager::BuildNFA(NFAComponent *comp) {
-  return Create(comp->start());
-}
-
-
-NFA* NFAManager::UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs) {
+NFAComponent *NFAManager::UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs) {
   assert(Node::kUnsetInt != lhs->end()->type());
   assert(Node::kUnsetInt != rhs->end()->type());
 
@@ -640,7 +639,12 @@ NFA* NFAManager::UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs) {
   // node_manager().Destroy(rhs_start);
   // edge_manager().Destroy(rhs);
 
-  return BuildNFA(lhs);
+  return lhs;
+}
+
+
+NFA *NFAManager::BuildNFA(NFAComponent *comp) {
+  return Create(comp->start());
 }
 
 
@@ -650,17 +654,17 @@ NFA* NFAManager::UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs) {
  */
 
 NFA::NFA(NFANode *start) : start_(start) {
-  unordered_set<NFANode*> visits;
+  unordered_set<NFANode *> visits;
   CollectNodes(start, visits);
 }
 
 
-void NFA::CollectNodes(NFANode *u, std::unordered_set<NFANode*> &visits) {
+void NFA::CollectNodes(NFANode *u, std::unordered_set<NFANode *> &visits) {
   u->set_number(nodes_.size());
   nodes_.push_back(u);
   visits.insert(u);
 
-  for (NFAEdge* edge : u->edges()) {
+  for (NFAEdge *edge : u->edges()) {
     NFANode *v = edge->next_node();
     if (visits.end() == visits.find(v)) {
       CollectNodes(v, visits);
