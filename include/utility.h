@@ -14,14 +14,14 @@
  */
 template<class T>
 class ScopeGuarder {
-public:
+ public:
   ScopeGuarder(T &&guard) : _guard(std::move(guard)) {}
 
   ~ScopeGuarder() { _guard(); }
 
   ScopeGuarder(ScopeGuarder &&) = default;
 
-private:
+ private:
   ScopeGuarder &operator=(ScopeGuarder &&) = delete;
 
   ScopeGuarder &operator=(const ScopeGuarder &) = delete;
@@ -42,18 +42,17 @@ inline ScopeGuarder<T> operator+(ScopeGuarderEmptyType, T &&guard) {
 #define ScopeGuard auto __FILE__##__LINE__##scope_guarder \
   = ScopeGuarderEmptyType() +
 
-
 /**
  * class filter_wrapper
  */
 template<class C, class F>
 class FilterWrapper {
-public:
+ public:
   FilterWrapper(C container, F filter) : _container(container),
                                          _filter(filter) {}
 
   class FilterIterator {
-  public:
+   public:
     typedef typename C::const_iterator inner_iterator;
 
     FilterIterator(inner_iterator curr, inner_iterator end, F filter) :
@@ -78,7 +77,7 @@ public:
       return _curr != rhs._curr;
     }
 
-  private:
+   private:
     inner_iterator _curr;
     inner_iterator _end;
     F _filter;
@@ -101,7 +100,7 @@ public:
     return end;
   }
 
-private:
+ private:
   C _container;
   F _filter;
 };

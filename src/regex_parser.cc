@@ -32,11 +32,9 @@ shared_ptr<DFA> RegexParser::ParseToDFA(const char *beg, const char *end) {
   return minimum;
 }
 
-
 shared_ptr<DFA> RegexParser::ParseToDFA(const std::string &s) {
   return ParseToDFA(s.c_str(), s.c_str() + s.length());
 }
-
 
 NFAComponent *
 RegexParser::ParseToNFAComponent(const char *beg, const char *end) {
@@ -45,11 +43,9 @@ RegexParser::ParseToNFAComponent(const char *beg, const char *end) {
   return ParseUnion(beg);
 }
 
-
 NFAComponent *RegexParser::ParseToNFAComponent(const string &s) {
   return ParseToNFAComponent(s.c_str(), s.c_str() + s.length());
 }
-
 
 NFAComponent *RegexParser::ParseUnion(const char *&p) {
   if (p >= end_) return nullptr;
@@ -85,7 +81,6 @@ NFAComponent *RegexParser::ParseUnion(const char *&p) {
   return result;
 }
 
-
 NFAComponent *RegexParser::ParseConcatenate(const char *&p) {
   assert(p < end_);
 
@@ -118,12 +113,10 @@ NFAComponent *RegexParser::ParseBasic(const char *&p) {
   NFAComponent *result{nullptr};
 
   switch (*p) {
-    case '(':
-      result = ParseGroup(p);
+    case '(':result = ParseGroup(p);
       break;
 
-    case '[':
-      result = ParseSet(p);
+    case '[':result = ParseSet(p);
       break;
 
     case '.': {
@@ -134,8 +127,7 @@ NFAComponent *RegexParser::ParseBasic(const char *&p) {
     }
       break;
 
-    case '\\':
-      result = ParseEscape(p);
+    case '\\':result = ParseEscape(p);
       break;
 
     default:
@@ -146,27 +138,22 @@ NFAComponent *RegexParser::ParseBasic(const char *&p) {
   }
 
   switch (*p) {
-    case '*':
-      result = nfa_manager_->KleenStar(result);
+    case '*':result = nfa_manager_->KleenStar(result);
       p += 1;
       break;
 
-    case '+':
-      result = nfa_manager_->LeastOne(result);
+    case '+':result = nfa_manager_->LeastOne(result);
       p += 1;
       break;
 
-    case '?':
-      result = nfa_manager_->Optional(result);
+    case '?':result = nfa_manager_->Optional(result);
       p += 1;
 
-    default:
-      break;
+    default:break;
   }
 
   return result;
 }
-
 
 NFAComponent *RegexParser::ParseGroup(const char *&p) {
   assert(p < end_);
@@ -185,13 +172,11 @@ NFAComponent *RegexParser::ParseGroup(const char *&p) {
   return result;
 }
 
-
 NFAComponent *RegexParser::ParseString(const char *&p) {
   // TODO
   assert(false);
   return nullptr;
 }
-
 
 NFAComponent *RegexParser::ParseEscape(const char *&p) {
   assert(p < end_);
@@ -211,12 +196,10 @@ NFAComponent *RegexParser::ParseEscape(const char *&p) {
     case ')':
     case '[':
     case ']':
-    case '|':
-      result = nfa_manager_->CreateCompFromChar(*p);
+    case '|':result = nfa_manager_->CreateCompFromChar(*p);
       break;
 
-    case 'd':
-      result = nfa_manager_->CreateCompFromRange('0', '9' + 1);
+    case 'd':result = nfa_manager_->CreateCompFromRange('0', '9' + 1);
       break;
 
     case 'D': {
@@ -226,8 +209,7 @@ NFAComponent *RegexParser::ParseEscape(const char *&p) {
     }
       break;
 
-    case 's':
-      result = nfa_manager_->CreateCompFromString(" \f\n\r\t\v");
+    case 's':result = nfa_manager_->CreateCompFromString(" \f\n\r\t\v");
       break;
 
     case 'S': {
@@ -259,7 +241,9 @@ NFAComponent *RegexParser::ParseEscape(const char *&p) {
       break;
 
     default:
-      logger.error("{}(): unrecognized escape char {}", __func__, int(*p));
+      logger.error("{}(): unrecognized escape char {}",
+                   __func__,
+                   int(*p));
       return nullptr;
   }
 
@@ -304,6 +288,5 @@ NFAComponent *RegexParser::ParseSet(const char *&p) {
   NFAComponent *result = nfa_manager_->CreateCompFromEdge(edge);
   return result;
 }
-
 
 } // end of namespace regular_expression

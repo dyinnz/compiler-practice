@@ -49,14 +49,12 @@ class NumberSet;
 
 class DFA;
 
-
 /**
  * type definition
  */
 typedef SmallObjPool<NFAEdge> NFAEdgeManager;
 typedef SmallObjPool<NFANode> NFANodeManager;
 typedef SmallObjPool<NFAComponent> NFACompManager;
-
 
 /**
  * get the string representation
@@ -68,7 +66,6 @@ std::string to_string(const Node &node);
 
 std::string to_string(const NumberSet &num_set);
 
-
 /**
  * for debug
  */
@@ -76,7 +73,6 @@ std::string to_string(const NumberSet &num_set);
 void PrintNFA(const NFA *nfa);
 
 void PrintDFA(const DFA *dfa);
-
 
 /**
  * @param normal    the DFA to be minimized
@@ -98,7 +94,7 @@ std::shared_ptr<DFA> ConvertNFAToDFA(const NFA *nfa);
  * @brief   unidirectional edge connected with NFA nodes
  */
 class NFAEdge {
-public:
+ public:
   typedef std::bitset<CHAR_MAX + 1> CharMasks;
 
   NFAEdge() = default;
@@ -151,7 +147,7 @@ public:
     }
   }
 
-private:
+ private:
   CharMasks char_masks_;
   NFANode *next_node_{nullptr};
 };
@@ -163,17 +159,17 @@ private:
  * @brief   common abstract super class of NFANode and DFANode
  */
 class Node {
-public:
+ public:
   enum State {
     kStart, kEnd, kStartEnd, kNormal
   };
 
   constexpr static int kUnsetInt{-1};
 
-protected:
+ protected:
   Node(State state) : state_(state) {}
 
-public:
+ public:
   int type() const {
     return type_;
   }
@@ -208,7 +204,7 @@ public:
     number_ = number;
   }
 
-private:
+ private:
   State state_;
   int type_{kUnsetInt};
   int number_{kUnsetInt};
@@ -221,7 +217,7 @@ private:
  *  @brief  only for NFA diagram
  */
 class NFANode : public Node {
-public:
+ public:
   NFANode(State state) : Node(state) {}
 
   const std::list<NFAEdge *> &edges() const {
@@ -237,7 +233,7 @@ public:
     edges_.splice(edges_.end(), other->edges_);
   }
 
-private:
+ private:
   std::list<NFAEdge *> edges_;
 };
 
@@ -248,7 +244,7 @@ private:
  * @brief   only for DFA diagram
  */
 class DFANode : public Node {
-public:
+ public:
   DFANode(State state) : Node(state) {}
 
   const std::unordered_map<char, DFANode *> &edges() const {
@@ -268,7 +264,7 @@ public:
     }
   }
 
-private:
+ private:
   std::unordered_map<char, DFANode *> edges_;
 };
 
@@ -279,7 +275,7 @@ private:
  * @brief   non-deterministic finite automaton component, only contains nodes
  */
 class NFAComponent {
-public:
+ public:
   NFAComponent(NFANode *start, NFAEdge *e, NFANode *end)
       : start_(start), end_(end) {
     assert(start->IsStart());
@@ -303,14 +299,13 @@ public:
 
   NFANode *RemoveEnd();
 
-private:
+ private:
   NFANode *start_{nullptr};
   NFANode *end_{nullptr};
 };
 
-
 class NFAManager : SmallObjPool<NFA> {
-public:
+ public:
   NFAEdgeManager &edge_manager() {
     return edge_manager_;
   }
@@ -377,7 +372,7 @@ public:
 
   NFA *BuildNFA(NFAComponent *comp);
 
-private:
+ private:
   NFAEdgeManager edge_manager_;
   NFANodeManager node_manager_;
   NFACompManager comp_manager_;
@@ -390,7 +385,7 @@ private:
  * @brief   non-deterministic finite automaton, could match or search a string.
  */
 class NFA {
-public:
+ public:
   NFA(NFANode *start);
 
   bool Match(const char *beg, const char *end) const;
@@ -409,14 +404,14 @@ public:
     return nodes_[number];
   }
 
-private:
+ private:
   void CollectNodes(NFANode *start, std::unordered_set<NFANode *> &visits);
 
   const char *MatchDFS(NFANode *curr, const char *beg, const char *end) const;
 
   const char *SearchDFS(NFANode *curr, const char *beg, const char *end) const;
 
-private:
+ private:
   NFANode *start_{nullptr};
   std::vector<NFANode *> nodes_;
 };
@@ -428,12 +423,12 @@ private:
  * @brief   a set contains number, support hashing and sharing with others
  */
 class NumberSet {
-public:
+ public:
   struct Hasher {
     size_t operator()(const NumberSet &num_set) const;
   };
 
-public:
+ public:
   NumberSet() : pset_(std::make_shared<std::set<int>>()) {}
 
   const std::set<int> &set() const {
@@ -464,10 +459,9 @@ public:
     pset_->insert(num_set.begin(), num_set.end());
   }
 
-private:
+ private:
   std::shared_ptr<std::set<int>> pset_;
 };
-
 
 inline bool operator==(const NumberSet &lhs, const NumberSet &rhs) {
   return lhs.set() == rhs.set();
@@ -484,7 +478,7 @@ inline bool operator!=(const NumberSet &lhs, const NumberSet &rhs) {
  * @brief   deterministric finite automaton
  */
 class DFA {
-public:
+ public:
   DFA(DFANode *start,
       std::vector<DFANode *> &&ends,
       std::vector<DFANode *> &&nodes)
@@ -493,7 +487,7 @@ public:
   }
 
   ~DFA() {
-    for (DFANode* node : nodes_) {
+    for (DFANode *node : nodes_) {
       delete node;
     }
   }
@@ -518,15 +512,14 @@ public:
 
   size_t Search(const std::string &s) const;
 
-private:
+ private:
   void NumberNode();
 
-private:
+ private:
   DFANode *start_{nullptr};
   std::vector<DFANode *> ends_;
   std::vector<DFANode *> nodes_;
 };
-
 
 /*----------------------------------------------------------------------------*/
 
@@ -550,7 +543,6 @@ NFAComponent *NFAManager::Union(NFAComponent *first, A... rest) {
   }
 }
 
-
 template<class ...A>
 NFAComponent *NFAManager::UnionWithMultiEnd(NFAComponent *first, A... rest) {
   if (0 == sizeof...(rest)) {
@@ -560,6 +552,5 @@ NFAComponent *NFAManager::UnionWithMultiEnd(NFAComponent *first, A... rest) {
     return UnionWithMultiEnd(first, rest_result);
   }
 }
-
 
 } // end of namespace transition_map

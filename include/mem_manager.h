@@ -58,9 +58,8 @@ struct Chunk {
   uint8_t free_num_;
 };
 
-
 class FixedAllocator {
-public:
+ public:
   FixedAllocator(std::size_t block_size, uint8_t blocks_num) :
       last_alloc_(nullptr), last_dealloc_(nullptr),
       block_size_(block_size), blocks_num_(blocks_num) {
@@ -118,7 +117,7 @@ public:
     last_dealloc_ = nullptr;
   }
 
-private:
+ private:
   std::vector<Chunk> chunks_;
   Chunk *last_alloc_;
   Chunk *last_dealloc_;
@@ -126,11 +125,10 @@ private:
   uint8_t blocks_num_;
 };
 
-
 template<class T, std::uint8_t N = kDefaultBlocksNum>
 class SmallObjPool {
-public:
-  SmallObjPool() : fixed_alloc_(sizeof(T), N) { }
+ public:
+  SmallObjPool() : fixed_alloc_(sizeof(T), N) {}
 
   ~SmallObjPool() {
     Release();
@@ -153,7 +151,7 @@ public:
     fixed_alloc_.Release();
   }
 
-private:
+ private:
   FixedAllocator fixed_alloc_;
-  std::vector<T*> records_;
+  std::vector<T *> records_;
 };

@@ -36,7 +36,7 @@ TEST_CASE("test small object pool", "[Small Object Pool]") {
 
   for (int i = kMaxIter / 2; i < kMaxIter; ++i) {
     auto p = points[i];
-    pool.Destroy(p);
+    // pool.Destroy(p);
     points.pop_back();
   }
 
@@ -54,10 +54,10 @@ TEST_CASE("test small object pool", "[Small Object Pool]") {
 }
 
 TEST_CASE("test multi times", "[multi Pool]") {
-    for (int times = 0; times < 100; ++times) {
-      SmallObjPool<int> pool;
-      for (int i = 0; i < 1000; ++i) {
-        pool.Create();
-      }
+  for (int times = 0; times < 100; ++times) {
+    SmallObjPool<int> pool;
+    for (int i = 0; i < 1000; ++i) {
+      pool.Create();
     }
+  }
 }

@@ -27,12 +27,10 @@ void Example() {
   cout << dfa->Match("ml_143@test.qq.com") << endl;
 }
 
-
 void TEST_Tokenizer() {
   Tokenizer tokenizer;
   tokenizer.BuildTokenizer("110", "[0123]+");
 }
-
 
 int main() {
   logger.set_log_level(kDebug);

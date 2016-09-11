@@ -34,12 +34,11 @@ namespace {
 
 using namespace regular_expression;
 
-
 /**
  * @brief   a helper class, convert NFA to DFA
  */
 class DFAConverter {
-private:
+ private:
   friend shared_ptr<DFA> regular_expression::ConvertNFAToDFA(const NFA *nfa);
 
   DFAConverter(const NFA *nfa) : nfa_(nfa) {}
@@ -64,18 +63,16 @@ private:
 
   std::shared_ptr<DFA> Convert();
 
-private:
+ private:
   std::unordered_map<NumberSet, DFANode *, NumberSet::Hasher> set_to_dfa_node_;
   std::vector<NumberSet> e_closures_;
   const NFA *nfa_;
 };
 
-
 void DFAConverter::ConversionPreamble() {
   e_closures_.resize(nfa_->size());
   // set_to_dfa_node_.reserve(nfa_->size());
 }
-
 
 const NumberSet &DFAConverter::EpsilonClosure(const NFANode *u) {
   NumberSet &s = e_closures_[u->number()];
@@ -98,7 +95,6 @@ const NumberSet &DFAConverter::EpsilonClosure(const NFANode *u) {
   return s;
 }
 
-
 NFAEdge::CharMasks DFAConverter::GetEdgeCharMasks(const NumberSet &num_set) {
   NFAEdge::CharMasks char_masks;
   for (int num : num_set) {
@@ -108,7 +104,6 @@ NFAEdge::CharMasks DFAConverter::GetEdgeCharMasks(const NumberSet &num_set) {
   }
   return char_masks;
 }
-
 
 NumberSet DFAConverter::GetAdjacentSet(const NumberSet &curr_set, char c) {
   NumberSet adjacent_set;
@@ -122,7 +117,6 @@ NumberSet DFAConverter::GetAdjacentSet(const NumberSet &curr_set, char c) {
   }
   return adjacent_set;
 }
-
 
 DFANode *DFAConverter::ConstructDFADiagram() {
   auto start_dfa_node = new DFANode(Node::kStart);
@@ -168,7 +162,6 @@ DFANode *DFAConverter::ConstructDFADiagram() {
   return start_dfa_node;
 }
 
-
 vector<DFANode *> DFAConverter::CollectEndNodes() {
   // collect END nodes
   vector<DFANode *> ends;
@@ -197,7 +190,6 @@ vector<DFANode *> DFAConverter::CollectEndNodes() {
   return ends;
 }
 
-
 vector<DFANode *> DFAConverter::CollectAllNodes() {
   // collect all nodes and number them
   vector<DFANode *> nodes;
@@ -206,7 +198,6 @@ vector<DFANode *> DFAConverter::CollectAllNodes() {
   }
   return nodes;
 }
-
 
 shared_ptr<DFA> DFAConverter::Convert() {
 
@@ -217,7 +208,7 @@ shared_ptr<DFA> DFAConverter::Convert() {
   auto ends = CollectEndNodes();
   auto nodes = CollectAllNodes();
 
-  return make_shared<DFA>(start, ends, nodes);
+  return make_shared<DFA>(start, std::move(ends), std::move(nodes));
 }
 
 
@@ -227,7 +218,7 @@ shared_ptr<DFA> DFAConverter::Convert() {
  * @brief   a help class, minimize the DFA
  */
 class DFAOptimizer {
-private:
+ private:
   friend shared_ptr<DFA>
   regular_expression::MinimizeDFA(const shared_ptr<DFA> normal);
 
@@ -253,12 +244,11 @@ private:
 
   shared_ptr<DFA> Minimize();
 
-private:
+ private:
   const shared_ptr<DFA> normal_{nullptr};
   std::list<NumberSet> partition_;
   std::vector<NumberSet *> num_to_set_;
 };
-
 
 // implement
 void DFAOptimizer::InitPartition() {
@@ -282,7 +272,6 @@ void DFAOptimizer::InitPartition() {
   }
 }
 
-
 void DFAOptimizer::BuildPartitionMap() {
   for (NumberSet &s : partition_) {
     for (int num : s) {
@@ -290,7 +279,6 @@ void DFAOptimizer::BuildPartitionMap() {
     }
   }
 }
-
 
 unordered_set<char> DFAOptimizer::GetSetEdgeChars(const NumberSet &s) {
   unordered_set<char> chars;
@@ -301,7 +289,6 @@ unordered_set<char> DFAOptimizer::GetSetEdgeChars(const NumberSet &s) {
   }
   return chars;
 }
-
 
 bool DFAOptimizer::PartSetByChar(list<NumberSet> &parted_sets,
                                  const NumberSet &curr_set, char c) {
@@ -336,7 +323,6 @@ bool DFAOptimizer::PartSetByChar(list<NumberSet> &parted_sets,
   }
   return is_parted;
 }
-
 
 void DFAOptimizer::TryPartEachSet() {
   size_t last_size = 0;
@@ -379,7 +365,6 @@ void DFAOptimizer::TryPartEachSet() {
     logger.debug("final parted set: {}", to_string(s));
   }
 }
-
 
 shared_ptr<DFA> DFAOptimizer::ConstructFromSets() {
   std::vector<DFANode *> normal_to_min(normal_->size());
@@ -432,10 +417,8 @@ shared_ptr<DFA> DFAOptimizer::ConstructFromSets() {
     }
   }
 
-  // return make_shared<DFA>(start, move(ends), move(nodes));
-  return make_shared<DFA>(start, ends, nodes);
+  return make_shared<DFA>(start, move(ends), move(nodes));
 }
-
 
 shared_ptr<DFA> DFAOptimizer::Minimize() {
 
@@ -450,7 +433,6 @@ shared_ptr<DFA> DFAOptimizer::Minimize() {
   auto minimum = ConstructFromSets();
   return minimum;
 }
-
 
 } // end of anonymous namespace
 
@@ -468,7 +450,6 @@ NFAEdge::NFAEdge(const std::string &s) {
     set(c);
   }
 }
-
 
 string to_string(const NFAEdge &edge) {
   string s{"--"};
@@ -497,25 +478,19 @@ void Node::AttachState(State state) {
   }
 }
 
-
 string to_string(const Node &node) {
   string s{"("};
   s += std::to_string(node.number());
   switch (node.state()) {
-    case Node::kStart:
-      s += ":start";
+    case Node::kStart:s += ":start";
       break;
-    case Node::kEnd:
-      s += ":end";
+    case Node::kEnd:s += ":end";
       break;
-    case Node::kStartEnd:
-      s += ":start/end";
+    case Node::kStartEnd:s += ":start/end";
       break;
-    case Node::kNormal:
-      s += ":normal";
+    case Node::kNormal:s += ":normal";
       break;
-    default:
-      break;
+    default:break;
   }
   if (node.IsEnd()) {
     s += ':';
@@ -539,7 +514,6 @@ NFANode *NFAComponent::SetNewStart(NFANode *start) {
   return old_start;
 }
 
-
 NFANode *NFAComponent::SetNewEnd(NFANode *end) {
   assert(end->IsEnd());
   NFANode *old_end = end_;
@@ -548,13 +522,11 @@ NFANode *NFAComponent::SetNewEnd(NFANode *end) {
   return old_end;
 }
 
-
 NFANode *NFAComponent::RemoveStart() {
   NFANode *old_start = start_;
   start_ = nullptr;
   return old_start;
 }
-
 
 NFANode *NFAComponent::RemoveEnd() {
   NFANode *old_end = end_;
@@ -582,7 +554,6 @@ NFAManager::Concatenate(NFAComponent *lhs, NFAComponent *rhs) {
   return lhs;
 }
 
-
 NFAComponent *NFAManager::Union(NFAComponent *lhs, NFAComponent *rhs) {
   NFANode *rhs_start = rhs->RemoveStart();
   lhs->start()->FetchEdges(rhs_start);
@@ -599,7 +570,6 @@ NFAComponent *NFAManager::Union(NFAComponent *lhs, NFAComponent *rhs) {
   return lhs;
 }
 
-
 NFAComponent *NFAManager::KleenStar(NFAComponent *nfa) {
   NFANode *old_start = nfa->SetNewStart(CreateNode(Node::kStart));
   NFANode *old_end = nfa->SetNewEnd(CreateNode(Node::kEnd));
@@ -611,12 +581,10 @@ NFAComponent *NFAManager::KleenStar(NFAComponent *nfa) {
   return nfa;
 }
 
-
 NFAComponent *NFAManager::Optional(NFAComponent *nfa) {
   nfa->start()->AddEdge(CreateEdge(), nfa->end());
   return nfa;
 }
-
 
 NFAComponent *NFAManager::LeastOne(NFAComponent *nfa) {
   NFANode *old_start = nfa->SetNewStart(CreateNode(Node::kStart));
@@ -629,8 +597,8 @@ NFAComponent *NFAManager::LeastOne(NFAComponent *nfa) {
   return nfa;
 }
 
-
-NFAComponent *NFAManager::UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs) {
+NFAComponent *NFAManager::UnionWithMultiEnd(NFAComponent *lhs,
+                                            NFAComponent *rhs) {
   assert(Node::kUnsetInt != lhs->end()->type());
   assert(Node::kUnsetInt != rhs->end()->type());
 
@@ -641,7 +609,6 @@ NFAComponent *NFAManager::UnionWithMultiEnd(NFAComponent *lhs, NFAComponent *rhs
 
   return lhs;
 }
-
 
 NFA *NFAManager::BuildNFA(NFAComponent *comp) {
   return Create(comp->start());
@@ -658,7 +625,6 @@ NFA::NFA(NFANode *start) : start_(start) {
   CollectNodes(start, visits);
 }
 
-
 void NFA::CollectNodes(NFANode *u, std::unordered_set<NFANode *> &visits) {
   u->set_number(nodes_.size());
   nodes_.push_back(u);
@@ -671,7 +637,6 @@ void NFA::CollectNodes(NFANode *u, std::unordered_set<NFANode *> &visits) {
     }
   }
 }
-
 
 const char *
 NFA::MatchDFS(NFANode *curr, const char *beg, const char *end) const {
@@ -706,12 +671,10 @@ NFA::MatchDFS(NFANode *curr, const char *beg, const char *end) const {
   return nullptr;
 }
 
-
 bool NFA::Match(const char *beg, const char *end) const {
   logger.debug("{}(): {}", __func__, beg);
   return (MatchDFS(start_, beg, end) == end);
 }
-
 
 const char *
 NFA::SearchDFS(NFANode *curr, const char *beg, const char *end) const {
@@ -719,12 +682,10 @@ NFA::SearchDFS(NFANode *curr, const char *beg, const char *end) const {
   return nullptr;
 }
 
-
 const char *NFA::Search(const char *begin, const char *end) const {
   // TODO
   return nullptr;
 }
-
 
 // for debug
 static void PrintNFARecur(const NFANode *u, vector<bool> &visit) {
@@ -740,7 +701,6 @@ static void PrintNFARecur(const NFANode *u, vector<bool> &visit) {
     }
   }
 }
-
 
 void PrintNFA(const NFA *nfa) {
   std::vector<bool> visit(nfa->size());
@@ -761,7 +721,6 @@ size_t NumberSet::Hasher::operator()(const NumberSet &num_set) const {
   return value;
 }
 
-
 std::string to_string(const NumberSet &num_set) {
   std::string str{"{"};
   for (int num : num_set.set()) {
@@ -770,7 +729,6 @@ std::string to_string(const NumberSet &num_set) {
   str += '}';
   return str;
 }
-
 
 // for debug
 string to_string(const set<int> &num_set) {
@@ -793,7 +751,6 @@ void DFA::NumberNode() {
   }
 }
 
-
 bool DFA::Match(const char *beg, const char *end) const {
   const char *s = beg;
   const DFANode *curr_node = start_;
@@ -815,22 +772,18 @@ bool DFA::Match(const char *beg, const char *end) const {
   return curr_node->IsEnd();
 }
 
-
 bool DFA::Match(const std::string &s) const {
   return Match(s.c_str(), s.c_str() + s.length());
 }
-
 
 const char *DFA::Search(const char *begin, const char *end) const {
   // TODO
   return nullptr;
 }
 
-
 size_t DFA::Search(const std::string &s) const {
   return -1;
 }
-
 
 static void PrintDFARecur(const DFANode *u, std::vector<bool> &visit) {
   visit[u->number()] = true;
@@ -845,12 +798,10 @@ static void PrintDFARecur(const DFANode *u, std::vector<bool> &visit) {
   }
 }
 
-
 void PrintDFA(const DFA *dfa) {
   vector<bool> visit(dfa->size());
   PrintDFARecur(dfa->start(), visit);
 }
-
 
 /*----------------------------------------------------------------------------*/
 

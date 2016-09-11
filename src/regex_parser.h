@@ -14,7 +14,7 @@ namespace regular_expression {
  */
 
 class RegexParser {
-public:
+ public:
   RegexParser(
       std::shared_ptr<NFAManager> nfa_manager = nullptr)
       : nfa_manager_(nfa_manager) {
@@ -37,7 +37,7 @@ public:
     return *nfa_manager_;
   }
 
-private:
+ private:
   NFAComponent *ParseUnion(const char *&p);
 
   NFAComponent *ParseConcatenate(const char *&p);
@@ -52,12 +52,11 @@ private:
 
   NFAComponent *ParseEscape(const char *&p);
 
-private:
+ private:
   const char *beg_{nullptr};
   const char *end_{nullptr};
   std::shared_ptr<NFAManager> nfa_manager_;
 };
-
 
 } // end of namespace regular_expression
 

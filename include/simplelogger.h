@@ -50,7 +50,7 @@ parse_format(std::ostringstream &ss, const char *format, const T &v, A... args);
  * logger for single thread
  */
 class BaseLogger {
-public:
+ public:
   BaseLogger(Level level = kLog) : _log_level(level) {
     for (int l = 0; l < kMaxLevel; ++l) {
       _fp[l] = stdout;
@@ -93,7 +93,7 @@ public:
     print_wrapper(kError, args...);
   }
 
-private:
+ private:
   template<typename ...A>
   void print_wrapper(Level level, A... args);
 
@@ -109,25 +109,23 @@ private:
   };
 };
 
-
 /**
  * logger for multi thread
  */
 class MTLogger : BaseLogger {
-public:
+ public:
 
-private:
+ private:
 
 };
-
 
 /**
  * logger for mpi
  */
 class MPILogger : BaseLogger {
-public:
+ public:
 
-private:
+ private:
 
 };
 
@@ -165,8 +163,7 @@ void parse_format(std::ostringstream &ss,
         }
         break;
 
-      default:
-        ss << *p;
+      default:ss << *p;
         p += 1;
         break;
     }

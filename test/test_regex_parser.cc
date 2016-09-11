@@ -66,7 +66,6 @@ TEST_CASE("concatenate postfix", "[Postfix]") {
   }
 }
 
-
 TEST_CASE("union postfix", "[Postfix]") {
   RegexParser re_parser;
   shared_ptr<DFA> dfa{re_parser.ParseToDFA("a*b+|c?d")};
