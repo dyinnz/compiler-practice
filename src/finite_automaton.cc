@@ -144,8 +144,6 @@ DFANode *DFAConverter::ConstructDFADiagram() {
           iter = set_to_dfa_node_.insert(
               {adjacent_set, new DFANode(Node::kNormal)}).first;
           q.push(adjacent_set);
-
-          logger.log("new node: {}", iter->second);
         }
         DFANode *dfa_adjacent = iter->second;
 

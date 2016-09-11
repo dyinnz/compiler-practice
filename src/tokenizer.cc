@@ -33,10 +33,8 @@ void Tokenizer::BuildTokenizer(const std::vector<std::string> &rules) {
   }
 
   auto token_nfa = re_parser.GetNFAManager().BuildNFA(result_comp);
-  PrintNFA(token_nfa);
 
   auto normal_dfa = ConvertNFAToDFA(token_nfa);
-  PrintDFA(normal_dfa.get());
 
   token_dfa_ = normal_dfa;
 

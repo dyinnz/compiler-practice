@@ -21,7 +21,6 @@ class RegexParser {
     if (!nfa_manager_) {
       // nfa_manager_ = std::make_shared<NFAManager>();
       nfa_manager_ = std::shared_ptr<NFAManager>(new NFAManager);
-      std::cout << "NFA Manager: " << nfa_manager_.get() << std::endl;
     }
   }
 

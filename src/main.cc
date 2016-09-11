@@ -29,7 +29,7 @@ void Example() {
 
 void TEST_Tokenizer() {
   Tokenizer tokenizer;
-  tokenizer.BuildTokenizer("110", "[0123]+");
+  tokenizer.BuildTokenizer({"110", "[0123]+"});
 }
 
 int main() {
