@@ -50,32 +50,33 @@ string to_string(const Symbol &symbol) {
 }
 
 Grammar BuildExprGrammar() {
-  Grammar grammar;
 
-  grammar.set_table({kExpr, kExprRecur, kTerm, kTermRecur, kFactor,
+  GrammarBuilder builder;
+
+  builder.SetSymbolTable({kExpr, kExprRecur, kTerm, kTermRecur, kFactor,
                      kAdd, kSub, kMul, kDiv, kLeftParen, kRightParen,
                      kNumber, kName,
                      kEpsilon, kEof, kStart});
 
-  grammar.InsertRule(kStart, {kExpr});
+  builder.InsertRule(kStart, {kExpr});
 
-  grammar.InsertRule(kExpr, {kTerm, kExprRecur});
+  builder.InsertRule(kExpr, {kTerm, kExprRecur});
 
-  grammar.InsertRule(kExprRecur, {kAdd, kTerm, kExprRecur});
-  grammar.InsertRule(kExprRecur, {kSub, kTerm, kExprRecur});
-  grammar.InsertRule(kExprRecur, {kEpsilon});
+  builder.InsertRule(kExprRecur, {kAdd, kTerm, kExprRecur});
+  builder.InsertRule(kExprRecur, {kSub, kTerm, kExprRecur});
+  builder.InsertRule(kExprRecur, {kEpsilon});
 
-  grammar.InsertRule(kTerm, {kFactor, kTermRecur});
+  builder.InsertRule(kTerm, {kFactor, kTermRecur});
 
-  grammar.InsertRule(kTermRecur, {kMul, kFactor, kTermRecur});
-  grammar.InsertRule(kTermRecur, {kDiv, kFactor, kTermRecur});
-  grammar.InsertRule(kTermRecur, {kEpsilon});
+  builder.InsertRule(kTermRecur, {kMul, kFactor, kTermRecur});
+  builder.InsertRule(kTermRecur, {kDiv, kFactor, kTermRecur});
+  builder.InsertRule(kTermRecur, {kEpsilon});
 
-  grammar.InsertRule(kFactor, {kLeftParen, kExpr, kRightParen});
-  grammar.InsertRule(kFactor, {kNumber});
-  grammar.InsertRule(kFactor, {kName});
+  builder.InsertRule(kFactor, {kLeftParen, kExpr, kRightParen});
+  builder.InsertRule(kFactor, {kNumber});
+  builder.InsertRule(kFactor, {kName});
 
-  return grammar;
+  return builder.Build();
 }
 
 } // end of namespace expr_grammar

@@ -24,6 +24,7 @@ add_executable(test_tokenizer
         src/regex_parser.cc
         src/tokenizer.cc)
 
-add_executable(test_expr_grammar
-        test/test_expr_grammar.cc
+add_executable(test_ll_parser
+        test/test_ll_parser.cc
+        src/ll_parser.cc
         src/expr_grammar.cc)

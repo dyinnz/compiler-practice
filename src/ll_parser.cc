@@ -13,7 +13,7 @@ using std::set;
 SymbolAuxSet CalcFirst(const Grammar &grammar) {
   SymbolAuxSet firsts;
 
-  for (auto &symbol : grammar.table()) {
+  for (auto &symbol : grammar.SymbolTable()) {
     if (symbol.IsTerminal()) {
       firsts[symbol] = {symbol};
     } else {
@@ -146,4 +146,27 @@ ExtendFirst CalcExtendFirst(const Grammar &grammar,
   }
 
   return extend_first;
+}
+
+bool BuildLLTable(const Grammar &grammar,
+                  const ExtendFirst &extend_firsts,
+                  LLTable &ll_table) {
+  for (size_t i = 0; i < extend_firsts.size(); ++i) {
+    auto &left = grammar.GetRuleRecord()[i]->first;
+    auto &left_entry = ll_table[left];
+    for (auto &terminal : extend_firsts[i]) {
+      if (left_entry.end() != left_entry.find(terminal)) {
+        return false;
+      }
+      left_entry.insert({terminal, i});
+    }
+  }
+  return true;
+}
+
+bool BuildLLTable(const Grammar &grammar, LLTable &ll_table) {
+  auto firsts = CalcFirst(grammar);
+  auto follows = CalcFollow(grammar, firsts);
+  auto extend_firsts = CalcExtendFirst(grammar, firsts, follows);
+  return BuildLLTable(grammar, extend_firsts, ll_table);
 }

@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <vector>
-#include <cstdint>
 #include <climits>
 #include <cassert>
+
+#include <vector>
 #include <unordered_map>
 
 constexpr int kEpsilonID = -1;
@@ -60,20 +60,12 @@ typedef std::vector<Symbol> Sequence;
 class Grammar {
  public:
   typedef std::unordered_multimap<Symbol, Sequence> RuleMap;
-  typedef std::vector<std::pair<const Symbol, Sequence>*> RuleRecord;
+  typedef std::vector<std::pair<const Symbol, Sequence> *> RuleRecord;
+  friend class GrammarBuilder;
 
-  void set_table(std::vector<Symbol> &&table) {
-    table_ = move(table);
-  }
-
-  const std::vector<Symbol> &table() const {
+ public:
+  const std::vector<Symbol> &SymbolTable() const {
     return table_;
-  }
-
-  void InsertRule(Symbol left, Sequence &&right) {
-    assert(!left.IsTerminal());
-    auto iter = rule_map_.insert({left, right});
-    rule_record_.push_back(&*iter);
   }
 
   const RuleMap &GetRuleMap() const {
@@ -88,4 +80,28 @@ class Grammar {
   RuleMap rule_map_;
   RuleRecord rule_record_;
   std::vector<Symbol> table_;
+};
+
+class GrammarBuilder {
+ public:
+  GrammarBuilder &SetSymbolTable(std::vector<Symbol> &&table) {
+    grammar_.table_ = table;
+    return *this;
+  }
+
+  GrammarBuilder &InsertRule(Symbol left, Sequence &&right) {
+    assert(!left.IsTerminal());
+    grammar_.rule_map_.insert({left, right});
+    return *this;
+  }
+
+  Grammar &&Build() {
+    for (auto &p : grammar_.rule_map_) {
+      grammar_.rule_record_.push_back(&p);
+    }
+    return std::move(grammar_);
+  }
+
+ private:
+  Grammar grammar_;
 };
