@@ -6,11 +6,9 @@ set(CMAKE_CXX_FLAGS "-std=c++11 -Wall -g")
 include_directories(include/)
 include_directories(src/)
 
-add_executable(main
-        src/main.cc
-        src/finite_automaton.cc
-        src/regex_parser.cc
-        src/tokenizer.cc)
+file(GLOB Sources ./src/*.cc)
+
+add_executable(main ${Sources})
 
 add_executable(test_mem_manager
         test/test_mem_manager.cc)
@@ -25,3 +23,7 @@ add_executable(test_tokenizer
         src/finite_automaton.cc
         src/regex_parser.cc
         src/tokenizer.cc)
+
+add_executable(test_expr_grammar
+        test/test_expr_grammar.cc
+        src/expr_grammar.cc)

@@ -7,22 +7,25 @@
 using std::vector;
 using std::string;
 using std::move;
+using std::pair;
 
 extern simple_logger::BaseLogger logger;
 
-void Tokenizer::BuildTokenizer(const std::vector<std::string> &rules) {
+void Tokenizer::BuildTokenizer(const vector<pair<string, int>> &pattern) {
   RegexParser re_parser;
   NFAComponent *result_comp = nullptr;
-  ResetLabel();
 
-  for (auto &s : rules) {
+  for (auto &p : pattern) {
+    const string &s = p.first;
+    int label = p.second;
+
     NFAComponent *comp = re_parser.ParseToNFAComponent(s);
     if (!comp) {
       logger.error("{}(): nullptr NFAComponent pointer", __func__);
       return;
     }
 
-    comp->end()->set_type(NextLabel());
+    comp->end()->set_type(label);
 
     if (result_comp) {
       result_comp = re_parser.GetNFAManager().UnionWithMultiEnd(result_comp,

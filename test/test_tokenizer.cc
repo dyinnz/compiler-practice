@@ -19,7 +19,8 @@ BaseLogger logger;
 
 TEST_CASE("test build dfa using vector, two rules", "[Test DFA]") {
   Tokenizer tokenizer;
-  tokenizer.BuildTokenizer({"110", "[0123]+"});
+  tokenizer.BuildTokenizer({{"110", 1},
+                            {"[0123]+", 2}});
   auto dfa = tokenizer.GetTokenDFA();
 
   REQUIRE(dfa->Match("110"));
@@ -29,7 +30,8 @@ TEST_CASE("test build dfa using vector, two rules", "[Test DFA]") {
 
 TEST_CASE("test build dfa", "[Test DFA]") {
   Tokenizer tokenizer;
-  tokenizer.BuildTokenizer({"110", "[0123]+"});
+  tokenizer.BuildTokenizer({{"110", 1},
+                            {"[0123]+", 2}});
   auto dfa = tokenizer.GetTokenDFA();
 
   REQUIRE(dfa->Match("110"));
@@ -37,37 +39,39 @@ TEST_CASE("test build dfa", "[Test DFA]") {
   REQUIRE_FALSE(dfa->Match("1104"));
 }
 
-
 TEST_CASE("test one token", "[Test Token]") {
   Tokenizer tokenizer;
-  tokenizer.BuildTokenizer({"110", "[0123]+"});
+  tokenizer.BuildTokenizer({{"110", 1},
+                            {"[0123]+", 2}});
 
-  string s {"110 12321"};
+  string s{"110 12321"};
 
   vector<Token> tokens;
   tokenizer.LexicalAnalyze(s, tokens);
 
-  const char *p =  s.c_str();
+  const char *p = s.c_str();
 
   Token token = tokenizer.GetNextToken(p);
-  REQUIRE(0 == token.type);
+  REQUIRE(1 == token.type);
   REQUIRE("110" == token.str);
 
   REQUIRE(' ' == *p);
   p += 1;
 
   token = tokenizer.GetNextToken(p);
-  REQUIRE(1 == token.type);
+  REQUIRE(2 == token.type);
   REQUIRE("12321" == token.str);
 
   REQUIRE(s.c_str() + s.length() == p);
 }
 
 TEST_CASE("test lexical analyse", "[Test Analyse]") {
-  Tokenizer  tokenizer;
-  tokenizer.BuildTokenizer({"if", "\\d+", "\\w+"});
+  Tokenizer tokenizer;
+  tokenizer.BuildTokenizer({{"if", 0},
+                            {"\\d+", 1},
+                            {"\\w+", 2}});
 
-  string s { "if there\tare\n1000 dogs" };
+  string s{"if there\tare\n1000 dogs"};
 
   vector<Token> tokens;
   REQUIRE(tokenizer.LexicalAnalyze(s, tokens));

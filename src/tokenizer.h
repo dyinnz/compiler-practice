@@ -9,41 +9,14 @@
 
 using namespace regular_expression;
 
-constexpr int kEndTokenType = -1;
-constexpr int kErrorTokenType = -2;
-
-struct Token {
-  Token() = default;
-  Token(std::string str,  int type) : str(str), type(type) {}
-
-  bool operator ==(const Token& rhs) {
-    return str == rhs.str && type == rhs.type;
-  }
-
-  bool operator !=(const Token& rhs) {
-    return operator==(rhs);
-  }
-
-  std::string str;
-  int type{-1};
-};
-
-const Token kEndToken {
-    .str = "kEndToken",
-    .type = kEndTokenType
-};
-
-const Token kErrorToken {
-    .str = "kErrorToken",
-    .type = kErrorTokenType,
-};
+#include "token.h"
 
 class Tokenizer {
  public:
   ~Tokenizer() {
   }
 
-  void BuildTokenizer(const std::vector<std::string> &rules);
+  void BuildTokenizer(const std::vector<std::pair<std::string, int>> &pattern);
 
   const DFA *GetTokenDFA() const {
     return &*token_dfa_;
@@ -56,11 +29,11 @@ class Tokenizer {
   Token GetNextToken(const char *&p);
 
   bool LexicalAnalyze(const std::string &s,
-                        std::vector<Token> &tokens);
+                      std::vector<Token> &tokens);
 
   bool LexicalAnalyze(const char *beg,
-                        const char *end,
-                        std::vector<Token> &tokens);
+                      const char *end,
+                      std::vector<Token> &tokens);
 
  private:
   void ResetLabel() {
