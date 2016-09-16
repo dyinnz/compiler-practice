@@ -6,28 +6,22 @@
 
 #include <string>
 
-constexpr int kEndTokenType = -1;
-constexpr int kErrorTokenType = -2;
+constexpr int kErrorTokenType = -1;
 
 struct Token {
   Token() = default;
   Token(std::string str,  int type) : str(str), type(type) {}
 
-  bool operator ==(const Token& rhs) {
+  bool operator ==(const Token& rhs) const {
     return str == rhs.str && type == rhs.type;
   }
 
-  bool operator !=(const Token& rhs) {
+  bool operator !=(const Token& rhs) const {
     return operator==(rhs);
   }
 
   std::string str;
-  int type{-1};
-};
-
-static const Token kEndToken {
-    .str = "kEndToken",
-    .type = kEndTokenType
+  int type;
 };
 
 static const Token kErrorToken {

@@ -10,9 +10,9 @@
 #include <vector>
 #include <unordered_map>
 
-constexpr int kEpsilonID = -1;
-constexpr int kEofID = -2;
-constexpr int kStartID = CHAR_MAX + 1;
+constexpr int kEofID = CHAR_MAX + 2;
+constexpr int kEpsilonID = CHAR_MAX + 1;
+constexpr int kStartID = CHAR_MAX + 3;
 
 class Symbol {
  public:
@@ -49,7 +49,7 @@ namespace std {
 template<>
 struct hash<Symbol> {
   std::size_t operator()(const Symbol &symbol) const {
-    return symbol.SymbolID();
+    return static_cast<size_t>(symbol.SymbolID());
   }
 };
 
@@ -76,16 +76,26 @@ class Grammar {
     return rule_record_;
   }
 
+  bool IsTerminal(int id) const {
+    return is_terminal_(id);
+  }
+
  private:
   RuleMap rule_map_;
   RuleRecord rule_record_;
   std::vector<Symbol> table_;
+  bool (*is_terminal_)(int id);
 };
 
 class GrammarBuilder {
  public:
   GrammarBuilder &SetSymbolTable(std::vector<Symbol> &&table) {
     grammar_.table_ = table;
+    return *this;
+  }
+
+  GrammarBuilder &SetIsTerminal(bool (*is_terminal)(int id)) {
+    grammar_.is_terminal_ = is_terminal;
     return *this;
   }
 

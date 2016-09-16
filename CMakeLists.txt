@@ -27,4 +27,8 @@ add_executable(test_tokenizer
 add_executable(test_ll_parser
         test/test_ll_parser.cc
         src/ll_parser.cc
-        src/expr_grammar.cc)
+        src/expr_grammar.cc
+        src/finite_automaton.cc
+        src/regex_parser.cc
+        src/tokenizer.cc
+        )

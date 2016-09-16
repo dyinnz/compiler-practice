@@ -11,6 +11,8 @@
 #include "expr_grammar.h"
 
 using namespace simple_logger;
+using std::string;
+using std::vector;
 using std::cout;
 using std::endl;
 using expr_grammar::to_string;
@@ -100,3 +102,52 @@ TEST_CASE("test ll table", "[LL Table]") {
   }
 }
 
+
+TEST_CASE("test expr tokenizer", "[Expr Tokenizer]") {
+  using namespace expr_grammar;
+
+  auto tokenizer = expr_grammar::BuildExprTokenizer();
+  string s{"a + 999 * (c - 1) "};
+  vector<Token> tokens;
+  bool result = tokenizer.LexicalAnalyze(s, tokens);
+  REQUIRE(result);
+
+  REQUIRE(tokens[0].str == "a");
+  REQUIRE(tokens[1].str == "+");
+  REQUIRE(tokens[2].str == "999");
+  REQUIRE(tokens[3].str == "*");
+  REQUIRE(tokens[4].str == "(");
+  REQUIRE(tokens[5].str == "c");
+  REQUIRE(tokens[6].str == "-");
+  REQUIRE(tokens[7].str == "1");
+  REQUIRE(tokens[8].str == ")");
+
+  REQUIRE(tokens[0].type == kNameID);
+  REQUIRE(tokens[1].type == '+');
+  REQUIRE(tokens[2].type == kNumberID);
+  REQUIRE(tokens[3].type == '*');
+  REQUIRE(tokens[4].type == '(');
+  REQUIRE(tokens[5].type == kNameID);
+  REQUIRE(tokens[6].type == '-');
+  REQUIRE(tokens[7].type == kNumberID);
+  REQUIRE(tokens[8].type == ')');
+}
+
+TEST_CASE("test ll parser", "[LL Parser]") {
+  using namespace expr_grammar;
+  logger.set_log_level(kDebug);
+
+  Grammar grammar = BuildExprGrammar();
+  LLTable ll_table;
+  BuildLLTable(grammar, ll_table);
+
+  LLParser ll_parser(grammar, ll_table);
+
+  Tokenizer tokenizer = BuildExprTokenizer();
+  string s{"a + 999 * (c - 1) "};
+  vector<Token> tokens;
+  tokenizer.LexicalAnalyze(s, tokens);
+
+  bool result = ll_parser.Parse(tokens);
+  REQUIRE(result);
+}

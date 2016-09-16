@@ -5,6 +5,7 @@
 #pragma once
 
 #include "grammar.h"
+#include "tokenizer.h"
 
 namespace expr_grammar {
 
@@ -18,6 +19,7 @@ constexpr int kNameID = kStartID + 7;
 
 std::string to_string(const Symbol &symbol);
 
+Tokenizer BuildExprTokenizer();
 Grammar BuildExprGrammar();
 
 } // end of namespace expr_grammar

@@ -3,12 +3,14 @@
 //
 
 #include "ll_parser.h"
-
-#include <iostream>
+#include "simplelogger.h"
+#include "expr_grammar.h"
 
 using std::unordered_multimap;
 using std::unordered_map;
 using std::set;
+
+extern simple_logger::BaseLogger logger;
 
 SymbolAuxSet CalcFirst(const Grammar &grammar) {
   SymbolAuxSet firsts;
@@ -169,4 +171,68 @@ bool BuildLLTable(const Grammar &grammar, LLTable &ll_table) {
   auto follows = CalcFollow(grammar, firsts);
   auto extend_firsts = CalcExtendFirst(grammar, firsts, follows);
   return BuildLLTable(grammar, extend_firsts, ll_table);
+}
+
+bool LLParser::Parse(std::vector<Token> &tokens) {
+  ast_ = std::make_shared<Ast>();
+  ast_->set_root(ast_->CreateNode(false, kStartID));
+
+  tokens.push_back({"EOF-of-LL", kEofID});
+
+  auto curr_token = tokens.begin();
+  bool result = true;
+
+  stack_.push(ast_->root());
+  while (!stack_.empty()) {
+    AstNode *top = stack_.top();
+    stack_.pop();
+
+    logger.debug("current symbol {}",
+                 expr_grammar::to_string(Symbol(false, top->type())));
+
+    if (!grammar_.IsTerminal(top->type())) {
+      auto ll_entry_iter = ll_table_.find(Symbol(false, top->type()));
+
+      if (ll_table_.end() == ll_entry_iter) {
+        logger.error("wrong LL(1) Table: no such non-terminal symbol");
+        result = false;
+        break;
+      }
+
+      auto rule_index_iter =
+          ll_entry_iter->second.find(Symbol(true, curr_token->type));
+
+      if (ll_entry_iter->second.end() == rule_index_iter) {
+        logger.error("unexpected token");
+        result = false;
+        break;
+      }
+
+      int rule_index = rule_index_iter->second;
+      auto &right = grammar_.GetRuleRecord()[rule_index]->second;
+
+      for (auto iter = right.rbegin(); iter != right.rend(); ++iter) {
+        stack_.push(ast_->CreateNode(iter->IsTerminal(), iter->SymbolID()));
+      }
+
+    } else {
+      if (top->type() == kEpsilonID) {
+        continue;
+
+      } if (top->type() == curr_token->type) {
+        ++curr_token;
+
+      } else {
+        logger.error("terminal unmatched");
+        result = false;
+        break;
+      }
+    }
+  }
+
+  if (result && curr_token->type == kEofID) {
+    result = true;
+  }
+
+  return result;
 }

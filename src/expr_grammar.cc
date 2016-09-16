@@ -3,6 +3,7 @@
 //
 
 #include "expr_grammar.h"
+#include "tokenizer.h"
 
 using std::string;
 
@@ -49,14 +50,47 @@ string to_string(const Symbol &symbol) {
   }
 }
 
+static bool IsTerminal(int id) {
+  switch (id) {
+    case kExprID:
+    case kExprRecurID:
+    case kTermID:
+    case kTermRecurID:
+    case kFactorID:
+    case kStartID:
+      return false;
+    default:
+      return true;
+  }
+}
+
+Tokenizer BuildExprTokenizer() {
+  Tokenizer tokenizer;
+
+  tokenizer.BuildTokenizer(
+      {{"\\(", '('},
+       {"\\)", ')'},
+       {"\\+", '+'},
+       {"-", '-'},
+       {"\\*", '*'},
+       {"/", '/'},
+       {"\\w+", kNameID},
+       {"\\d+", kNumberID}
+      });
+
+  return tokenizer;
+}
+
 Grammar BuildExprGrammar() {
 
   GrammarBuilder builder;
 
   builder.SetSymbolTable({kExpr, kExprRecur, kTerm, kTermRecur, kFactor,
-                     kAdd, kSub, kMul, kDiv, kLeftParen, kRightParen,
-                     kNumber, kName,
-                     kEpsilon, kEof, kStart});
+                          kAdd, kSub, kMul, kDiv, kLeftParen, kRightParen,
+                          kNumber, kName,
+                          kEpsilon, kEof, kStart});
+
+  builder.SetIsTerminal(IsTerminal);
 
   builder.InsertRule(kStart, {kExpr});
 

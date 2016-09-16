@@ -81,12 +81,12 @@ TEST_CASE("test lexical analyse", "[Test Analyse]") {
   REQUIRE(tokens[2].str == "are");
   REQUIRE(tokens[3].str == "1000");
   REQUIRE(tokens[4].str == "dogs");
-  REQUIRE(tokens[5].str == "kEndToken");
+  REQUIRE(tokens[5].str == "kEofToken");
 
   REQUIRE(tokens[0].type == 0);
   REQUIRE(tokens[1].type == 2);
   REQUIRE(tokens[2].type == 2);
   REQUIRE(tokens[3].type == 1);
   REQUIRE(tokens[4].type == 2);
-  REQUIRE(tokens[5].type == kEndTokenType);
+  REQUIRE(tokens[5].type == kEofTokenType);
 }

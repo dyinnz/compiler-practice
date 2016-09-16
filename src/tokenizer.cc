@@ -106,6 +106,5 @@ bool Tokenizer::LexicalAnalyze(const char *beg,
     }
   }
 
-  tokens.push_back(kEndToken);
   return true;
 }
