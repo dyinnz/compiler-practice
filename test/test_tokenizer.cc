@@ -17,10 +17,13 @@ using std::vector;
 
 BaseLogger logger;
 
+static const Symbol k110 {Symbol::kTerminal, kStartID + 1};
+static const Symbol kNumber {Symbol::kTerminal, kStartID + 2};
+
 TEST_CASE("test build dfa using vector, two rules", "[Test DFA]") {
   Tokenizer tokenizer;
-  tokenizer.BuildTokenizer({{"110", 1},
-                            {"[0123]+", 2}});
+  tokenizer.BuildTokenizer({{"110", k110},
+                            {"[0123]+", kNumber}});
   auto dfa = tokenizer.GetTokenDFA();
 
   REQUIRE(dfa->Match("110"));
@@ -30,8 +33,8 @@ TEST_CASE("test build dfa using vector, two rules", "[Test DFA]") {
 
 TEST_CASE("test build dfa", "[Test DFA]") {
   Tokenizer tokenizer;
-  tokenizer.BuildTokenizer({{"110", 1},
-                            {"[0123]+", 2}});
+  tokenizer.BuildTokenizer({{"110", k110},
+                            {"[0123]+", kNumber}});
   auto dfa = tokenizer.GetTokenDFA();
 
   REQUIRE(dfa->Match("110"));
@@ -41,8 +44,8 @@ TEST_CASE("test build dfa", "[Test DFA]") {
 
 TEST_CASE("test one token", "[Test Token]") {
   Tokenizer tokenizer;
-  tokenizer.BuildTokenizer({{"110", 1},
-                            {"[0123]+", 2}});
+  tokenizer.BuildTokenizer({{"110", k110},
+                            {"[0123]+", kNumber}});
 
   string s{"110 12321"};
 
@@ -52,24 +55,27 @@ TEST_CASE("test one token", "[Test Token]") {
   const char *p = s.c_str();
 
   Token token = tokenizer.GetNextToken(p);
-  REQUIRE(1 == token.type);
+  REQUIRE(k110 == token.symbol);
   REQUIRE("110" == token.str);
 
   REQUIRE(' ' == *p);
   p += 1;
 
   token = tokenizer.GetNextToken(p);
-  REQUIRE(2 == token.type);
+  REQUIRE(kNumber == token.symbol);
   REQUIRE("12321" == token.str);
 
   REQUIRE(s.c_str() + s.length() == p);
 }
 
+static const Symbol kIf {Symbol::kTerminal, kStartID + 3};
+static const Symbol kWord {Symbol::kTerminal, kStartID + 4};
+
 TEST_CASE("test lexical analyse", "[Test Analyse]") {
   Tokenizer tokenizer;
-  tokenizer.BuildTokenizer({{"if", 0},
-                            {"\\d+", 1},
-                            {"\\w+", 2}});
+  tokenizer.BuildTokenizer({{"if", kIf},
+                            {"\\d+", kNumber},
+                            {"\\w+", kWord}});
 
   string s{"if there\tare\n1000 dogs"};
 
@@ -81,12 +87,10 @@ TEST_CASE("test lexical analyse", "[Test Analyse]") {
   REQUIRE(tokens[2].str == "are");
   REQUIRE(tokens[3].str == "1000");
   REQUIRE(tokens[4].str == "dogs");
-  REQUIRE(tokens[5].str == "kEofToken");
 
-  REQUIRE(tokens[0].type == 0);
-  REQUIRE(tokens[1].type == 2);
-  REQUIRE(tokens[2].type == 2);
-  REQUIRE(tokens[3].type == 1);
-  REQUIRE(tokens[4].type == 2);
-  REQUIRE(tokens[5].type == kEofTokenType);
+  REQUIRE(tokens[0].symbol == kIf);
+  REQUIRE(tokens[1].symbol == kWord);
+  REQUIRE(tokens[2].symbol == kWord);
+  REQUIRE(tokens[3].symbol == kNumber);
+  REQUIRE(tokens[4].symbol == kWord);
 }

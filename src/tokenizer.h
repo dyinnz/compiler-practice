@@ -16,7 +16,7 @@ class Tokenizer {
   ~Tokenizer() {
   }
 
-  void BuildTokenizer(const std::vector<std::pair<std::string, int>> &pattern);
+  void BuildTokenizer(const std::vector<std::pair<std::string, Symbol>> &pattern);
 
   const DFA *GetTokenDFA() const {
     return &*token_dfa_;
@@ -36,20 +36,21 @@ class Tokenizer {
                       std::vector<Token> &tokens);
 
  private:
-  void ResetLabel() {
-    label_num_ = 0;
+  void ResetPriority() {
+    next_priority_ = 0;
   }
 
-  int NextLabel() {
-    return label_num_++;
+  int NextPriority() {
+    return next_priority_++;
   }
 
   const char *SkipSpace(const char *p);
 
  private:
   std::shared_ptr<DFA> token_dfa_;
+  std::vector<Symbol> priority_to_symbol;
   const char *beg_;
   const char *end_;
   const char *curr_;
-  int label_num_;
+  int next_priority_;
 };

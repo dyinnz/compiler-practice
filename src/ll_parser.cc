@@ -34,20 +34,20 @@ SymbolAuxSet CalcFirst(const Grammar &grammar) {
       // init loop: curr_set <- First(B1) - epsilon
       auto iter = right.begin();
       auto curr_set = firsts[*iter];
-      curr_set.erase(kEpsilon);
+      curr_set.erase(kEpsilonSymbol);
 
       while (iter != right.end()
-          && firsts[*iter].end() != firsts[*iter].find(kEpsilon)) {
+          && firsts[*iter].end() != firsts[*iter].find(kEpsilonSymbol)) {
         // curr_set <- curr_set & (First(Bk+1) - epsilon)
         auto inserted_set = firsts[*iter++];
-        inserted_set.erase(kEpsilon);
+        inserted_set.erase(kEpsilonSymbol);
         curr_set.insert(inserted_set.begin(), inserted_set.end());
       }
 
       // if B1B2...Bk could be epsilon, then A could be epsilon
       auto last_set = firsts[right.back()];
-      if (iter == right.end() && last_set.end() != last_set.find(kEpsilon)) {
-        curr_set.insert(kEpsilon);
+      if (iter == right.end() && last_set.end() != last_set.find(kEpsilonSymbol)) {
+        curr_set.insert(kEpsilonSymbol);
       }
 
       size_t old_size = firsts[left].size();
@@ -67,7 +67,7 @@ SymbolAuxSet CalcFirst(const Grammar &grammar) {
 SymbolAuxSet CalcFollow(const Grammar &grammar, const SymbolAuxSet &firsts) {
   SymbolAuxSet follows;
 
-  follows[kStart].insert(kEof);
+  follows[kStartSymbol].insert(kEofSymbol);
 
   bool is_change;
   do {
@@ -96,10 +96,10 @@ SymbolAuxSet CalcFollow(const Grammar &grammar, const SymbolAuxSet &firsts) {
             is_change = true;
           }
 
-          if (right_part_first.end() != right_part_first.find(kEpsilon)) {
+          if (right_part_first.end() != right_part_first.find(kEpsilonSymbol)) {
             // curr_set <- curr_set & (First(Bi) - epsilon)
             auto inserted = right_part_first;
-            inserted.erase(kEpsilon);
+            inserted.erase(kEpsilonSymbol);
             curr_set.insert(inserted.begin(), inserted.end());
           } else {
             // curr_set <- First(Bi)
@@ -134,7 +134,7 @@ ExtendFirst CalcExtendFirst(const Grammar &grammar,
       auto &curr_first = firsts.find(*iter)->second;
       extend_first[i].insert(curr_first.begin(), curr_first.end());
 
-      if (curr_first.end() == curr_first.find(kEpsilon)) {
+      if (curr_first.end() == curr_first.find(kEpsilonSymbol)) {
         break;
       }
       ++iter;
@@ -175,9 +175,9 @@ bool BuildLLTable(const Grammar &grammar, LLTable &ll_table) {
 
 bool LLParser::Parse(std::vector<Token> &tokens) {
   ast_ = std::make_shared<Ast>();
-  ast_->set_root(ast_->CreateNode(false, kStartID));
+  ast_->set_root(ast_->CreateNode(kStartSymbol));
 
-  tokens.push_back({"EOF-of-LL", kEofID});
+  tokens.push_back({"EOF-of-LL", kEofSymbol});
 
   auto curr_token = tokens.begin();
   bool result = true;
@@ -187,11 +187,11 @@ bool LLParser::Parse(std::vector<Token> &tokens) {
     AstNode *top = stack_.top();
     stack_.pop();
 
-    logger.debug("current symbol {}",
-                 expr_grammar::to_string(Symbol(false, top->type())));
+    logger.debug("current symbol {}", expr_grammar::to_string(top->symbol()));
 
-    if (!grammar_.IsTerminal(top->type())) {
-      auto ll_entry_iter = ll_table_.find(Symbol(false, top->type()));
+    if (!top->symbol().IsTerminal()) {
+      auto ll_entry_iter =
+          ll_table_.find(top->symbol());
 
       if (ll_table_.end() == ll_entry_iter) {
         logger.error("wrong LL(1) Table: no such non-terminal symbol");
@@ -200,7 +200,7 @@ bool LLParser::Parse(std::vector<Token> &tokens) {
       }
 
       auto rule_index_iter =
-          ll_entry_iter->second.find(Symbol(true, curr_token->type));
+          ll_entry_iter->second.find(curr_token->symbol);
 
       if (ll_entry_iter->second.end() == rule_index_iter) {
         logger.error("unexpected token");
@@ -212,14 +212,15 @@ bool LLParser::Parse(std::vector<Token> &tokens) {
       auto &right = grammar_.GetRuleRecord()[rule_index]->second;
 
       for (auto iter = right.rbegin(); iter != right.rend(); ++iter) {
-        stack_.push(ast_->CreateNode(iter->IsTerminal(), iter->SymbolID()));
+        stack_.push(ast_->CreateNode(*iter));
       }
 
     } else {
-      if (top->type() == kEpsilonID) {
+      if (top->symbol() == kEpsilonSymbol) {
         continue;
 
-      } if (top->type() == curr_token->type) {
+      }
+      if (top->symbol() == curr_token->symbol) {
         ++curr_token;
 
       } else {
@@ -230,7 +231,7 @@ bool LLParser::Parse(std::vector<Token> &tokens) {
     }
   }
 
-  if (result && curr_token->type == kEofID) {
+  if (result && curr_token->symbol == kEofSymbol) {
     result = true;
   }
 

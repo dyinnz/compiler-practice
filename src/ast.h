@@ -10,11 +10,10 @@
 
 class AstNode {
  public:
-  AstNode(bool is_terminal, int type)
-      : is_terminal_(is_terminal), type_(type) {}
+  AstNode(Symbol symbol) : symbol_(symbol) {}
 
-  int type() const {
-    return type_;
+  Symbol symbol() const {
+    return symbol_;
   }
 
   void set_token(Token token) {
@@ -36,16 +35,15 @@ class AstNode {
  private:
   std::vector<AstNode *> children_;
   Token token_;
-  bool is_terminal_;
-  int type_;
+  Symbol symbol_;
 };
 
 typedef SmallObjPool<AstNode> AstNodeManager;
 
 class Ast {
  public:
-  AstNode *CreateNode(bool is_terminal, int type) {
-    return node_manager_.Create(is_terminal, type);
+  AstNode *CreateNode(Symbol symbol) {
+    return node_manager_.Create(symbol);
   }
 
   void set_root(AstNode *node) {

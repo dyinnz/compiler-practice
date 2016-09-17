@@ -170,12 +170,12 @@ class Node {
   Node(State state) : state_(state) {}
 
  public:
-  int type() const {
-    return type_;
+  int priority() const {
+    return priority_;
   }
 
-  void set_type(int type) {
-    type_ = type;
+  void set_priority(int priority) {
+    priority_ = priority;
   }
 
   bool IsStart() const {
@@ -206,7 +206,7 @@ class Node {
 
  private:
   State state_;
-  int type_{kUnsetInt};
+  int priority_{kUnsetInt};
   int number_{kUnsetInt};
 };
 

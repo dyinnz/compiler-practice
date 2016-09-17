@@ -5,26 +5,22 @@
 #pragma once
 
 #include <string>
-
-constexpr int kErrorTokenType = -1;
+#include "symbol.h"
 
 struct Token {
-  Token() = default;
-  Token(std::string str,  int type) : str(str), type(type) {}
+  Token(std::string str, Symbol symbol) : str(str), symbol(symbol) {}
+  Token() : symbol(kErrorSymbol) {}
 
   bool operator ==(const Token& rhs) const {
-    return str == rhs.str && type == rhs.type;
+    return str == rhs.str && symbol == rhs.symbol;
   }
 
   bool operator !=(const Token& rhs) const {
-    return operator==(rhs);
+    return !operator==(rhs);
   }
 
   std::string str;
-  int type;
+  Symbol symbol;
 };
 
-static const Token kErrorToken {
-    .str = "kErrorToken",
-    .type = kErrorTokenType,
-};
+static const Token kErrorToken {"kErrorToken", kErrorSymbol};

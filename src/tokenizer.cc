@@ -11,13 +11,15 @@ using std::pair;
 
 extern simple_logger::BaseLogger logger;
 
-void Tokenizer::BuildTokenizer(const vector<pair<string, int>> &pattern) {
+void Tokenizer::BuildTokenizer(const vector<pair<string, Symbol>> &pattern) {
   RegexParser re_parser;
   NFAComponent *result_comp = nullptr;
 
+  ResetPriority();
+
   for (auto &p : pattern) {
     const string &s = p.first;
-    int label = p.second;
+    auto symbol = p.second;
 
     NFAComponent *comp = re_parser.ParseToNFAComponent(s);
     if (!comp) {
@@ -25,7 +27,9 @@ void Tokenizer::BuildTokenizer(const vector<pair<string, int>> &pattern) {
       return;
     }
 
-    comp->end()->set_type(label);
+    int priority = NextPriority();
+    priority_to_symbol.push_back(symbol);
+    comp->end()->set_priority(priority);
 
     if (result_comp) {
       result_comp = re_parser.GetNFAManager().UnionWithMultiEnd(result_comp,
@@ -68,7 +72,8 @@ Token Tokenizer::GetNextToken(const char *&p) {
       logger.debug("{}", to_string(*curr_node));
 
       if (curr_node->IsEnd()) {
-        longest_token.type = curr_node->type();
+        int priority = curr_node->priority();
+        longest_token.symbol = priority_to_symbol[priority];
       }
 
     } else {
@@ -79,7 +84,7 @@ Token Tokenizer::GetNextToken(const char *&p) {
   longest_token.str= std::string(p, s);
   p = s;
 
-  logger.debug("{}:{}", longest_token.type, longest_token.str);
+  logger.debug("{}:{}", longest_token.symbol, longest_token.str);
   return longest_token;
 }
 

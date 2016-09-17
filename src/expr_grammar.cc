@@ -9,23 +9,23 @@ using std::string;
 
 namespace expr_grammar {
 
-Symbol kExpr{false, kExprID};
-Symbol kExprRecur{false, kExprRecurID};
-Symbol kTerm{false, kTermID};
-Symbol kTermRecur{false, kTermRecurID};
-Symbol kFactor{false, kFactorID};
+const Symbol kExpr{Symbol::kNonTerminal, kExprID};
+const Symbol kExprRecur{Symbol::kNonTerminal, kExprRecurID};
+const Symbol kTerm{Symbol::kNonTerminal, kTermID};
+const Symbol kTermRecur{Symbol::kNonTerminal, kTermRecurID};
+const Symbol kFactor{Symbol::kNonTerminal, kFactorID};
 
-Symbol kAdd{true, '+'};
-Symbol kSub{true, '-'};
-Symbol kMul{true, '*'};
-Symbol kDiv{true, '/'};
-Symbol kLeftParen{true, '('};
-Symbol kRightParen{true, ')'};
-Symbol kNumber{true, kNumberID};
-Symbol kName{true, kNameID};
+const Symbol kAdd{Symbol::kTerminal, '+'};
+const Symbol kSub{Symbol::kTerminal, '-'};
+const Symbol kMul{Symbol::kTerminal, '*'};
+const Symbol kDiv{Symbol::kTerminal, '/'};
+const Symbol kLeftParen{Symbol::kTerminal, '('};
+const Symbol kRightParen{Symbol::kTerminal, ')'};
+const Symbol kNumber{Symbol::kTerminal, kNumberID};
+const Symbol kName{Symbol::kTerminal, kNameID};
 
 string to_string(const Symbol &symbol) {
-  switch (symbol.SymbolID()) {
+  switch (symbol.ID()) {
     case kExprID:return "Expr";
 
     case kExprRecurID:return "ExprRecur";
@@ -46,7 +46,7 @@ string to_string(const Symbol &symbol) {
 
     case kStartID:return "Start";
 
-    default:return string(1, static_cast<char>(symbol.SymbolID()));
+    default:return string(1, static_cast<char>(symbol.ID()));
   }
 }
 
@@ -68,14 +68,14 @@ Tokenizer BuildExprTokenizer() {
   Tokenizer tokenizer;
 
   tokenizer.BuildTokenizer(
-      {{"\\(", '('},
-       {"\\)", ')'},
-       {"\\+", '+'},
-       {"-", '-'},
-       {"\\*", '*'},
-       {"/", '/'},
-       {"\\w+", kNameID},
-       {"\\d+", kNumberID}
+      {{R"(\()", kLeftParen},
+       {R"(\))", kRightParen},
+       {R"(\+)", kAdd},
+       {R"(-)", kSub},
+       {R"(/)", kDiv},
+       {R"(\*)", kMul},
+       {R"(\d+)", kNumber},
+       {R"([A-Za-z_]\w*)", kName},
       });
 
   return tokenizer;
@@ -88,27 +88,29 @@ Grammar BuildExprGrammar() {
   builder.SetSymbolTable({kExpr, kExprRecur, kTerm, kTermRecur, kFactor,
                           kAdd, kSub, kMul, kDiv, kLeftParen, kRightParen,
                           kNumber, kName,
-                          kEpsilon, kEof, kStart});
+                          kEpsilonSymbol, kEofSymbol, kStartSymbol});
 
   builder.SetIsTerminal(IsTerminal);
 
-  builder.InsertRule(kStart, {kExpr});
+  builder.InsertRule(kStartSymbol, {kExpr});
 
   builder.InsertRule(kExpr, {kTerm, kExprRecur});
 
   builder.InsertRule(kExprRecur, {kAdd, kTerm, kExprRecur});
   builder.InsertRule(kExprRecur, {kSub, kTerm, kExprRecur});
-  builder.InsertRule(kExprRecur, {kEpsilon});
+  builder.InsertRule(kExprRecur, {kEpsilonSymbol});
 
   builder.InsertRule(kTerm, {kFactor, kTermRecur});
 
   builder.InsertRule(kTermRecur, {kMul, kFactor, kTermRecur});
   builder.InsertRule(kTermRecur, {kDiv, kFactor, kTermRecur});
-  builder.InsertRule(kTermRecur, {kEpsilon});
+  builder.InsertRule(kTermRecur, {kEpsilonSymbol});
 
   builder.InsertRule(kFactor, {kLeftParen, kExpr, kRightParen});
   builder.InsertRule(kFactor, {kNumber});
   builder.InsertRule(kFactor, {kName});
+
+  std::cout << "hello" << std::endl;
 
   return builder.Build();
 }

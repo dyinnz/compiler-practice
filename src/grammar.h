@@ -10,50 +10,7 @@
 #include <vector>
 #include <unordered_map>
 
-constexpr int kEofID = CHAR_MAX + 2;
-constexpr int kEpsilonID = CHAR_MAX + 1;
-constexpr int kStartID = CHAR_MAX + 3;
-
-class Symbol {
- public:
-  Symbol(bool is_terminal, int id)
-      : is_terminal_(is_terminal), id_(id) {}
-
-  bool IsTerminal() const {
-    return is_terminal_;
-  }
-
-  int SymbolID() const {
-    return id_;
-  }
-
-  bool operator<(const Symbol &rhs) const {
-    return id_ < rhs.id_;
-  }
-
-  bool operator==(const Symbol &rhs) const {
-    return id_ == rhs.id_;
-  }
-
- private:
-  bool is_terminal_;
-  int id_;
-};
-
-static const Symbol kEpsilon{true, kEpsilonID};
-static const Symbol kEof{true, kEofID};
-static const Symbol kStart{false, kStartID};
-
-namespace std {
-
-template<>
-struct hash<Symbol> {
-  std::size_t operator()(const Symbol &symbol) const {
-    return static_cast<size_t>(symbol.SymbolID());
-  }
-};
-
-} // end of namespace std
+#include "symbol.h"
 
 typedef std::vector<Symbol> Sequence;
 

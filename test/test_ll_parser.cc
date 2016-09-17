@@ -122,15 +122,15 @@ TEST_CASE("test expr tokenizer", "[Expr Tokenizer]") {
   REQUIRE(tokens[7].str == "1");
   REQUIRE(tokens[8].str == ")");
 
-  REQUIRE(tokens[0].type == kNameID);
-  REQUIRE(tokens[1].type == '+');
-  REQUIRE(tokens[2].type == kNumberID);
-  REQUIRE(tokens[3].type == '*');
-  REQUIRE(tokens[4].type == '(');
-  REQUIRE(tokens[5].type == kNameID);
-  REQUIRE(tokens[6].type == '-');
-  REQUIRE(tokens[7].type == kNumberID);
-  REQUIRE(tokens[8].type == ')');
+  REQUIRE(tokens[0].symbol == kName);
+  REQUIRE(tokens[1].symbol == kAdd);
+  REQUIRE(tokens[2].symbol == kNumber);
+  REQUIRE(tokens[3].symbol == kMul);
+  REQUIRE(tokens[4].symbol == kLeftParen);
+  REQUIRE(tokens[5].symbol == kName);
+  REQUIRE(tokens[6].symbol == kSub);
+  REQUIRE(tokens[7].symbol == kNumber);
+  REQUIRE(tokens[8].symbol == kRightParen);
 }
 
 TEST_CASE("test ll parser", "[LL Parser]") {

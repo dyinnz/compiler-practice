@@ -173,13 +173,13 @@ vector<DFANode *> DFAConverter::CollectEndNodes() {
         if (!dfa_node->IsEnd()) {
           // first END NFANode in set
           dfa_node->AttachState(DFANode::kEnd);
-          dfa_node->set_type(nfa_node->type());
+          dfa_node->set_priority(nfa_node->priority());
           ends.push_back(dfa_node);
 
         } else {
-          // set the type with higher priority
-          if (nfa_node->type() < dfa_node->type()) {
-            dfa_node->set_type(nfa_node->type());
+          // set the priority with higher priority
+          if (nfa_node->priority() < dfa_node->priority()) {
+            dfa_node->set_priority(nfa_node->priority());
           }
         }
       } // end of nfa_node->IsEnd()
@@ -389,12 +389,12 @@ shared_ptr<DFA> DFAOptimizer::ConstructFromSets() {
         if (!min_node->IsEnd()) {
           // first END DFANode in set
           min_node->AttachState(Node::kEnd);
-          min_node->set_type(normal_node->type());
+          min_node->set_priority(normal_node->priority());
           ends.push_back(min_node);
         } else {
-          // set the type with higher priority
-          if (normal_node->type() < min_node->type()) {
-            min_node->set_type(normal_node->type());
+          // set the priority with higher priority
+          if (normal_node->priority() < min_node->priority()) {
+            min_node->set_priority(normal_node->priority());
           }
         }
       }
@@ -492,7 +492,7 @@ string to_string(const Node &node) {
   }
   if (node.IsEnd()) {
     s += ':';
-    s += std::to_string(node.type());
+    s += std::to_string(node.priority());
   }
   s += ')';
   return s;
@@ -597,8 +597,8 @@ NFAComponent *NFAManager::LeastOne(NFAComponent *nfa) {
 
 NFAComponent *NFAManager::UnionWithMultiEnd(NFAComponent *lhs,
                                             NFAComponent *rhs) {
-  assert(Node::kUnsetInt != lhs->end()->type());
-  assert(Node::kUnsetInt != rhs->end()->type());
+  assert(Node::kUnsetInt != lhs->end()->priority());
+  assert(Node::kUnsetInt != rhs->end()->priority());
 
   NFANode *rhs_start = rhs->RemoveStart();
   lhs->start()->FetchEdges(rhs_start);
