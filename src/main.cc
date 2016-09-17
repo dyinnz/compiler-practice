@@ -31,9 +31,12 @@ void Example() {
 }
 
 void TEST_Tokenizer() {
+  const Symbol k110 {Symbol::kTerminal, kStartID + 1};
+  const Symbol kNumber {Symbol::kTerminal, kStartID + 2};
+
   Tokenizer tokenizer;
-  tokenizer.BuildTokenizer({{"110", 1},
-                            {"[0123]+", 2}});
+  tokenizer.BuildTokenizer({{"110", k110},
+                            {"[0123]+", kNumber}});
 }
 
 void TEST_ExprGrammar() {
