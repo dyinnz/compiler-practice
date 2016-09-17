@@ -15,7 +15,7 @@ extern simple_logger::BaseLogger logger;
 SymbolAuxSet CalcFirst(const Grammar &grammar) {
   SymbolAuxSet firsts;
 
-  for (auto &symbol : grammar.SymbolTable()) {
+  for (auto &symbol : grammar.AllSymbols()) {
     if (symbol.IsTerminal()) {
       firsts[symbol] = {symbol};
     } else {
@@ -26,10 +26,10 @@ SymbolAuxSet CalcFirst(const Grammar &grammar) {
   bool is_change = false;
   do {
     is_change = false;
-    for (auto &rule : grammar.GetRuleMap()) {
+    for (auto &rule : grammar.AllRules()) {
       // fetch a rule: A->B1B2...Bk
-      auto &left = rule.first;
-      auto &right = rule.second;
+      auto &left = rule.left();
+      auto &right = rule.right();
 
       // init loop: curr_set <- First(B1) - epsilon
       auto iter = right.begin();
@@ -46,7 +46,8 @@ SymbolAuxSet CalcFirst(const Grammar &grammar) {
 
       // if B1B2...Bk could be epsilon, then A could be epsilon
       auto last_set = firsts[right.back()];
-      if (iter == right.end() && last_set.end() != last_set.find(kEpsilonSymbol)) {
+      if (iter == right.end()
+          && last_set.end() != last_set.find(kEpsilonSymbol)) {
         curr_set.insert(kEpsilonSymbol);
       }
 
@@ -72,10 +73,10 @@ SymbolAuxSet CalcFollow(const Grammar &grammar, const SymbolAuxSet &firsts) {
   bool is_change;
   do {
     is_change = false;
-    for (auto &rule : grammar.GetRuleMap()) {
+    for (auto &rule : grammar.AllRules()) {
       // fetch a rule: A->B1B2...Bk
-      auto &left = rule.first;
-      auto &right = rule.second;
+      auto &left = rule.left();
+      auto &right = rule.right();
 
       // init loop: curr_set <- Follow(A)
       set<Symbol> curr_set = follows[left];
@@ -120,12 +121,12 @@ SymbolAuxSet CalcFollow(const Grammar &grammar, const SymbolAuxSet &firsts) {
 ExtendFirst CalcExtendFirst(const Grammar &grammar,
                             const SymbolAuxSet &firsts,
                             const SymbolAuxSet &follows) {
-  ExtendFirst extend_first(grammar.GetRuleRecord().size());
+  ExtendFirst extend_first(grammar.RuleNumber());
 
   for (size_t i = 0; i < extend_first.size(); ++i) {
     // fetch a rule: A->B1B2...Bk
-    auto &left = grammar.GetRuleRecord()[i]->first;
-    auto &right = grammar.GetRuleRecord()[i]->second;
+    auto &left = grammar.GetRule(i).left();
+    auto &right = grammar.GetRule(i).right();
 
     // fill the First+(A) with (First(B1) & First(B2) & ... First(Bi)),
     // where Bi is the first one which epsilon does not belong to First(Bi)
@@ -154,7 +155,7 @@ bool BuildLLTable(const Grammar &grammar,
                   const ExtendFirst &extend_firsts,
                   LLTable &ll_table) {
   for (size_t i = 0; i < extend_firsts.size(); ++i) {
-    auto &left = grammar.GetRuleRecord()[i]->first;
+    auto &left = grammar.GetRule(i).left();
     auto &left_entry = ll_table[left];
     for (auto &terminal : extend_firsts[i]) {
       if (left_entry.end() != left_entry.find(terminal)) {
@@ -176,40 +177,39 @@ bool BuildLLTable(const Grammar &grammar, LLTable &ll_table) {
 bool LLParser::Parse(std::vector<Token> &tokens) {
   ast_ = std::make_shared<Ast>();
   ast_->set_root(ast_->CreateNode(kStartSymbol));
+  stack_.push(ast_->root());
 
-  tokens.push_back({"EOF-of-LL", kEofSymbol});
+  tokens.push_back(kEofToken);
 
   auto curr_token = tokens.begin();
   bool result = true;
 
-  stack_.push(ast_->root());
   while (!stack_.empty()) {
     AstNode *top = stack_.top();
     stack_.pop();
 
+    // logger.debug("current symbol {}", top->symbol());
     logger.debug("current symbol {}", expr_grammar::to_string(top->symbol()));
 
     if (!top->symbol().IsTerminal()) {
-      auto ll_entry_iter =
-          ll_table_.find(top->symbol());
 
+      auto ll_entry_iter = ll_table_.find(top->symbol());
       if (ll_table_.end() == ll_entry_iter) {
-        logger.error("wrong LL(1) Table: no such non-terminal symbol");
+        logger.error("wrong LL(1) Table: no such non-terminal symbol {}",
+                     top->symbol());
         result = false;
         break;
       }
 
-      auto rule_index_iter =
-          ll_entry_iter->second.find(curr_token->symbol);
-
+      auto rule_index_iter = ll_entry_iter->second.find(curr_token->symbol);
       if (ll_entry_iter->second.end() == rule_index_iter) {
-        logger.error("unexpected token");
+        logger.error("unexpected token {}", to_string(*curr_token));
         result = false;
         break;
       }
 
       int rule_index = rule_index_iter->second;
-      auto &right = grammar_.GetRuleRecord()[rule_index]->second;
+      auto &right = grammar_.GetRule(rule_index).right();
 
       for (auto iter = right.rbegin(); iter != right.rend(); ++iter) {
         stack_.push(ast_->CreateNode(*iter));

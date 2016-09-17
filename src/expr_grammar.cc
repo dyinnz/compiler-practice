@@ -50,20 +50,6 @@ string to_string(const Symbol &symbol) {
   }
 }
 
-static bool IsTerminal(int id) {
-  switch (id) {
-    case kExprID:
-    case kExprRecurID:
-    case kTermID:
-    case kTermRecurID:
-    case kFactorID:
-    case kStartID:
-      return false;
-    default:
-      return true;
-  }
-}
-
 Tokenizer BuildExprTokenizer() {
   Tokenizer tokenizer;
 
@@ -90,8 +76,6 @@ Grammar BuildExprGrammar() {
                           kNumber, kName,
                           kEpsilonSymbol, kEofSymbol, kStartSymbol});
 
-  builder.SetIsTerminal(IsTerminal);
-
   builder.InsertRule(kStartSymbol, {kExpr});
 
   builder.InsertRule(kExpr, {kTerm, kExprRecur});
@@ -109,8 +93,6 @@ Grammar BuildExprGrammar() {
   builder.InsertRule(kFactor, {kLeftParen, kExpr, kRightParen});
   builder.InsertRule(kFactor, {kNumber});
   builder.InsertRule(kFactor, {kName});
-
-  std::cout << "hello" << std::endl;
 
   return builder.Build();
 }

@@ -60,9 +60,9 @@ TEST_CASE("test extend first set", "[First+]") {
 
   cout << "========= the Extend First set =========" << endl;
   for (size_t i = 0; i < extend_firsts.size(); ++i) {
-    auto prule = grammar.GetRuleRecord()[i];
-    cout << "[Rule " << i << "] " << to_string(prule->first) << "-> ";
-    for (auto &right_part : prule->second) {
+    auto &rule = grammar.GetRule(i);
+    cout << "[Rule " << i << "] " << to_string(rule.left()) << "-> ";
+    for (auto &right_part : rule.right()) {
       cout << to_string(right_part) << " ";
     }
     cout << endl;

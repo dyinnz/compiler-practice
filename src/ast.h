@@ -12,16 +12,16 @@ class AstNode {
  public:
   AstNode(Symbol symbol) : symbol_(symbol) {}
 
-  Symbol symbol() const {
+  const Symbol &symbol() const {
     return symbol_;
   }
 
-  void set_token(Token token) {
-    token_ = token;
+  const std::string &str() const {
+    return str_;
   }
 
-  const Token &token() const {
-    return token_;
+  void set_str(std::string &&str) {
+    str_ = str;
   }
 
   void AddChild(AstNode *child) {
@@ -34,8 +34,8 @@ class AstNode {
 
  private:
   std::vector<AstNode *> children_;
-  Token token_;
   Symbol symbol_;
+  std::string str_;
 };
 
 typedef SmallObjPool<AstNode> AstNodeManager;

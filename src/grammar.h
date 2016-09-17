@@ -9,62 +9,96 @@
 
 #include <vector>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "symbol.h"
 
 typedef std::vector<Symbol> Sequence;
 
-class Grammar {
+class ProductionRule {
  public:
-  typedef std::unordered_multimap<Symbol, Sequence> RuleMap;
-  typedef std::vector<std::pair<const Symbol, Sequence> *> RuleRecord;
-  friend class GrammarBuilder;
+  ProductionRule(const Symbol &left, Sequence &&right)
+      : left_(left), right_(right) {}
 
- public:
-  const std::vector<Symbol> &SymbolTable() const {
-    return table_;
+  ProductionRule(const ProductionRule &) = delete;
+  ProductionRule(ProductionRule &&) = default;
+
+  const Symbol &left() const {
+    return left_;
   }
 
-  const RuleMap &GetRuleMap() const {
-    return rule_map_;
-  }
-
-  const RuleRecord &GetRuleRecord() const {
-    return rule_record_;
-  }
-
-  bool IsTerminal(int id) const {
-    return is_terminal_(id);
+  const Sequence &right() const {
+    return right_;
   }
 
  private:
-  RuleMap rule_map_;
+  Symbol left_;
+  Sequence right_;
+};
+
+class Grammar {
+ public:
+  typedef std::vector<ProductionRule> RuleRecord;
+  typedef std::unordered_multimap<Symbol, const Sequence *const> RuleMap;
+  typedef std::pair<RuleMap::const_iterator, RuleMap::const_iterator> RuleRange;
+  typedef std::unordered_set<Symbol> Table;
+
+  friend class GrammarBuilder;
+
+ public:
+  size_t RuleNumber() const {
+    return rule_record_.size();
+  }
+
+  const RuleRecord &AllRules() const {
+    return rule_record_;
+  }
+
+  const ProductionRule &GetRule(size_t index) const {
+    assert(index < rule_record_.size());
+    return rule_record_[index];
+  }
+
+  RuleRange GetRule(Symbol symbol) const {
+    return rule_map_.equal_range(symbol);
+  }
+
+  const Table &AllSymbols() const {
+    return table_;
+  }
+
+  bool CheckSymbol(Symbol symbol) const {
+    return table_.end() != table_.find(symbol);
+  }
+
+ private:
   RuleRecord rule_record_;
-  std::vector<Symbol> table_;
-  bool (*is_terminal_)(int id);
+  RuleMap rule_map_;
+  Table table_;
 };
 
 class GrammarBuilder {
  public:
-  GrammarBuilder &SetSymbolTable(std::vector<Symbol> &&table) {
+  GrammarBuilder &SetSymbolTable(Grammar::Table &&table) {
     grammar_.table_ = table;
     return *this;
   }
 
-  GrammarBuilder &SetIsTerminal(bool (*is_terminal)(int id)) {
-    grammar_.is_terminal_ = is_terminal;
+  GrammarBuilder &InsertRule(Symbol left, Sequence &&right) {
+    assert(left.IsNonTerminal());
+    grammar_.rule_record_.emplace_back(left, std::move(right));
     return *this;
   }
 
-  GrammarBuilder &InsertRule(Symbol left, Sequence &&right) {
-    assert(!left.IsTerminal());
-    grammar_.rule_map_.insert({left, right});
+  GrammarBuilder &InsertRule(ProductionRule &&rule) {
+    assert(rule.left().IsNonTerminal());
+    grammar_.rule_record_.push_back(std::move(rule));
     return *this;
   }
 
   Grammar &&Build() {
-    for (auto &p : grammar_.rule_map_) {
-      grammar_.rule_record_.push_back(&p);
+    for (auto &rule : grammar_.rule_record_) {
+      grammar_.rule_map_.insert({rule.left(), &rule.right()});
     }
     return std::move(grammar_);
   }

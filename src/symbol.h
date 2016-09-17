@@ -64,6 +64,5 @@ static const Symbol kEpsilonSymbol{Symbol::kTerminal, kEpsilonID};
 static const Symbol kStartSymbol{Symbol::kNonTerminal, kStartID};
 
 inline std::ostream& operator<<(std::ostream &os, const Symbol &symbol) {
-  os << symbol.ID() << std::endl;
-  return os;
+  return os << '[' << symbol.ID() << ']';
 }
