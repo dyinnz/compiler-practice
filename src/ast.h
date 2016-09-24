@@ -20,15 +20,25 @@ class AstNode {
     return str_;
   }
 
-  void set_str(std::string &&str) {
-    str_ = str;
+  size_t row() const {
+    return row_;
+  }
+
+  size_t column() const {
+    return column_;
+  }
+
+  void FetchToken(Token &&token) {
+    str_ = std::move(token.str);
+    row_ = token.row;
+    column_ = token.column;
   }
 
   void AddChild(AstNode *child) {
     children_.push_back(child);
   }
 
-  const std::vector<AstNode *> children() const {
+  const std::vector<AstNode *> &children() const {
     return children_;
   }
 
@@ -36,6 +46,8 @@ class AstNode {
   std::vector<AstNode *> children_;
   Symbol symbol_;
   std::string str_;
+  size_t row_ {0};
+  size_t column_ {0};
 };
 
 typedef SmallObjPool<AstNode> AstNodeManager;

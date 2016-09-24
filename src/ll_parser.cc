@@ -211,8 +211,13 @@ bool LLParser::Parse(std::vector<Token> &tokens) {
       int rule_index = rule_index_iter->second;
       auto &right = grammar_.GetRule(rule_index).right();
 
-      for (auto iter = right.rbegin(); iter != right.rend(); ++iter) {
-        stack_.push(ast_->CreateNode(*iter));
+      for (auto &right_part : right) {
+        top->AddChild(ast_->CreateNode(right_part));
+      }
+
+      for (auto iter = top->children().rbegin(); iter != top->children().rend();
+           ++iter) {
+        stack_.push(*iter);
       }
 
     } else {
@@ -221,6 +226,8 @@ bool LLParser::Parse(std::vector<Token> &tokens) {
 
       }
       if (top->symbol() == curr_token->symbol) {
+        // top->set_str(std::move(curr_token->str));
+        top->FetchToken(std::move(*curr_token));
         ++curr_token;
 
       } else {

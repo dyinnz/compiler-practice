@@ -60,12 +60,47 @@ void TEST_ExprGrammar() {
   }
 }
 
+void PrintASTRecur(AstNode *node, size_t deep = 0) {
+  using namespace expr_grammar;
+
+  for (size_t i = 0; i < deep; ++i) {
+    cout << "  ";
+  }
+
+  cout << to_string(node->symbol()) << ":" << node->str() << std::endl;
+
+  for (auto child : node->children()) {
+    PrintASTRecur(child, deep+1);
+  }
+}
+
+void TEST_LLParser() {
+  using namespace expr_grammar;
+
+  Grammar grammar = BuildExprGrammar();
+  LLTable ll_table;
+  BuildLLTable(grammar, ll_table);
+
+  LLParser ll_parser(grammar, ll_table);
+
+  Tokenizer tokenizer = BuildExprTokenizer();
+  string s{"a + 999 * (c - 1) "};
+  vector<Token> tokens;
+  tokenizer.LexicalAnalyze(s, tokens);
+
+  bool result = ll_parser.Parse(tokens);
+  auto ast_root = ll_parser.ast()->root();
+
+  PrintASTRecur(ast_root);
+}
+
 int main() {
   logger.set_log_level(kDebug);
 
   // Example();
   // TEST_Tokenizer();
-  TEST_ExprGrammar();
+  // TEST_ExprGrammar();
+  TEST_LLParser();
 
   return 0;
 }

@@ -72,6 +72,8 @@ static const Symbol kIf {Symbol::kTerminal, kStartID + 3};
 static const Symbol kWord {Symbol::kTerminal, kStartID + 4};
 
 TEST_CASE("test lexical analyse", "[Test Analyse]") {
+  // logger.set_log_level(kDebug);
+
   Tokenizer tokenizer;
   tokenizer.BuildTokenizer({{"if", kIf},
                             {"\\d+", kNumber},
@@ -81,6 +83,8 @@ TEST_CASE("test lexical analyse", "[Test Analyse]") {
 
   vector<Token> tokens;
   REQUIRE(tokenizer.LexicalAnalyze(s, tokens));
+
+  REQUIRE(5 == tokens.size());
 
   REQUIRE(tokens[0].str == "if");
   REQUIRE(tokens[1].str == "there");
@@ -93,4 +97,16 @@ TEST_CASE("test lexical analyse", "[Test Analyse]") {
   REQUIRE(tokens[2].symbol == kWord);
   REQUIRE(tokens[3].symbol == kNumber);
   REQUIRE(tokens[4].symbol == kWord);
+
+  REQUIRE(tokens[0].row == 0);
+  REQUIRE(tokens[1].row == 0);
+  REQUIRE(tokens[2].row == 0);
+  REQUIRE(tokens[3].row == 1);
+  REQUIRE(tokens[4].row == 1);
+
+  REQUIRE(tokens[0].column == 0);
+  REQUIRE(tokens[1].column == 3);
+  REQUIRE(tokens[2].column == 9);
+  REQUIRE(tokens[3].column == 0);
+  REQUIRE(tokens[4].column == 5);
 }

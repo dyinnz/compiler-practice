@@ -52,5 +52,7 @@ class Tokenizer {
   const char *beg_;
   const char *end_;
   const char *curr_;
+  const char *curr_row_pos_;
+  size_t curr_row_;
   int next_priority_;
 };

@@ -35,6 +35,10 @@ class LLParser {
 
   bool Parse(std::vector<Token> &tokens);
 
+  std::shared_ptr<Ast> ast() {
+    return ast_;
+  }
+
  private:
   const Grammar &grammar_;
   const LLTable &ll_table_;

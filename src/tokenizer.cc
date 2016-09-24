@@ -50,6 +50,10 @@ void Tokenizer::BuildTokenizer(const vector<pair<string, Symbol>> &pattern) {
 
 const char *Tokenizer::SkipSpace(const char *p) {
   while (p != end_ && isspace(*p)) {
+    if ('\n' == *p) {
+      curr_row_ += 1;
+      curr_row_pos_ = p + 1;
+    }
     p += 1;
   }
   return p;
@@ -81,7 +85,9 @@ Token Tokenizer::GetNextToken(const char *&p) {
     }
   }
 
-  longest_token.str= std::string(p, s);
+  longest_token.str = std::string(p, s);
+  longest_token.row = curr_row_;
+  longest_token.column = p - curr_row_pos_;
   p = s;
 
   logger.debug("{}:{}", longest_token.symbol, longest_token.str);
@@ -97,6 +103,9 @@ bool Tokenizer::LexicalAnalyze(const char *beg,
                                vector<Token> &tokens) {
   beg_ = beg;
   end_ = end;
+
+  curr_row_ = 0;
+  curr_row_pos_ = beg_;
 
   curr_ = beg;
   while (true) {
