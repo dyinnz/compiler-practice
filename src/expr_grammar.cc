@@ -6,6 +6,7 @@
 #include "simplelogger.h"
 
 using std::string;
+using std::move;
 
 extern simple_logger::BaseLogger logger;
 
@@ -73,10 +74,10 @@ std::shared_ptr<ExprGrammarData> CreateGrammarData() {
   return std::make_shared<ExprGrammarData>();
 }
 
-void TokenFeeder(void *grammar_data, Token &token) {
+void TokenFeeder(void *grammar_data, Token &&token) {
   ExprGrammarData *expr_data = static_cast<ExprGrammarData *>(grammar_data);
 
-  auto ast_node = expr_data->ast()->CreateNode(token);
+  auto ast_node = expr_data->ast()->CreateNode(move(token));
   expr_data->node_record().push_back(ast_node);
 
   logger.debug("{}() node record size {} feed {}",
@@ -98,7 +99,7 @@ void Operand_Recur(void *grammar_data) {
 
   auto operand_node = node_record.back();
   if (recur_node->symbol() != kEpsilonSymbol) {
-    recur_node->push_front_child(operand_node);
+    recur_node->push_child_front(operand_node);
     node_record.back() = recur_node;
   }
 }
@@ -118,11 +119,11 @@ void Recur_Op_Recur(void *grammar_data) {
 
   auto &operator_node = node_record.back();
   if (recur_node->symbol() == kEpsilonSymbol) {
-    operator_node->push_back_child(operand_node);
+    operator_node->push_child_back(operand_node);
 
   } else {
-    recur_node->push_front_child(operand_node);
-    operator_node->push_back_child(recur_node);
+    recur_node->push_child_front(operand_node);
+    operator_node->push_child_back(recur_node);
   }
 }
 

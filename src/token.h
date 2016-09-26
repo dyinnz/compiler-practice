@@ -5,6 +5,7 @@
 #pragma once
 
 #include <string>
+#include <sstream>
 #include "symbol.h"
 
 struct Token {
@@ -25,11 +26,13 @@ struct Token {
   size_t column{0};
 };
 
-static const Token kErrorToken{"kErrorToken", kErrorSymbol};
-static const Token kEofToken{"kEofToken", kEofSymbol};
+static const Token kErrorToken("kErrorToken", kErrorSymbol);
+static const Token kEofToken("kEofToken", kEofSymbol);
 
 inline std::string to_string(const Token &token) {
-  return "Token { T" + std::to_string(token.symbol.ID()) + ", P("
-      + std::to_string(token.row) + ',' + std::to_string(token.column) + "), "
-      + token.str + " }";
+  std::ostringstream oss;
+  oss << "Token { T" << token.symbol.ID()
+      << ", P(" << token.row << ',' << token.column << "), "
+      << token.str << " }";
+  return oss.str();
 }

@@ -16,17 +16,24 @@ typedef std::unordered_map<Symbol, std::set<Symbol>> SymbolAuxSet;
 typedef std::vector<std::set<Symbol>> ExtendFirst;
 typedef std::unordered_map<Symbol, std::unordered_map<Symbol, size_t>> LLTable;
 
+/**
+ * Build LL(1) table
+ */
 SymbolAuxSet CalcFirst(const Grammar &grammar);
 SymbolAuxSet CalcFollow(const Grammar &grammar, const SymbolAuxSet &firsts);
 ExtendFirst CalcExtendFirst(const Grammar &grammar,
                             const SymbolAuxSet &firsts,
                             const SymbolAuxSet &follows);
+
 bool BuildLLTable(const Grammar &grammar,
                   const ExtendFirst &extend_firsts,
                   LLTable &ll_table);
 
 bool BuildLLTable(const Grammar &grammar, LLTable &ll_table);
 
+/**
+ * @brief LL(1) Parser
+ */
 class LLParser {
  private:
   struct StackState {
@@ -45,13 +52,12 @@ class LLParser {
   bool ProductTerminal(void *grammar_data,
                        StackState &top_state,
                        std::vector<Token>::iterator &token_iter);
+
   bool ProductNonTerminal(StackState &top_state,
-                          Token &token);
+                          Token &&token);
 
  private:
   const Grammar &grammar_;
   const LLTable &ll_table_;
-  void *grammar_data_;
-
   std::stack<StackState> production_stack_;
 };

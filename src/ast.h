@@ -9,13 +9,16 @@
 #include "mem_manager.h"
 #include "token.h"
 
+/**
+ * @brief   Abstract Syntax Tree Node
+ */
 class AstNode {
  public:
   AstNode(Symbol symbol) : symbol_(symbol) {}
 
-  AstNode(Token &token)
+  AstNode(Token &&token)
       : symbol_(token.symbol),
-        str_(token.str),
+        str_(std::move(token.str)),
         row_(token.row),
         column_(token.column) {}
 
@@ -41,11 +44,11 @@ class AstNode {
     column_ = token.column;
   }
 
-  void push_back_child(AstNode *child) {
+  void push_child_back(AstNode *child) {
     children_.push_back(child);
   }
 
-  void push_front_child(AstNode *child) {
+  void push_child_front(AstNode *child) {
     children_.push_front(child);
   }
 
@@ -61,16 +64,17 @@ class AstNode {
   size_t column_{0};
 };
 
-typedef SmallObjPool<AstNode> AstNodeManager;
-
+/**
+ * @brief   Abstract Syntax Tree
+ */
 class Ast {
  public:
   AstNode *CreateNode(Symbol symbol) {
     return node_manager_.Create(symbol);
   }
 
-  AstNode *CreateNode(Token &token) {
-    return node_manager_.Create(token);
+  AstNode *CreateNode(Token &&token) {
+    return node_manager_.Create(std::move(token));
   }
 
   void set_root(AstNode *node) {
@@ -82,6 +86,8 @@ class Ast {
   }
 
  private:
+  typedef SmallObjPool<AstNode> AstNodeManager;
+
   AstNode *root_;
   AstNodeManager node_manager_;
 };

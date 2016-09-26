@@ -44,7 +44,7 @@ void TEST_ExprGrammar() {
   LLTable ll_table;
   bool result = BuildLLTable(grammar, ll_table);
 
-  cout << "========= test LL(1) Table =========" << endl;
+  cout << "========= test LL(1) SymbolTable =========" << endl;
   for (auto &nonterminal_pair : ll_table) {
     auto &nonterminal = nonterminal_pair.first;
     auto &jump_map = nonterminal_pair.second;

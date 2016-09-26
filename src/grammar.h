@@ -17,14 +17,12 @@
 #include "ast.h"
 
 typedef std::vector<Symbol> Sequence;
+typedef std::function<void(void *)> SnippetCallback;
 
 class ProductionRule {
  public:
-  typedef std::function<void(void *)> SnippetCallback;
-
   ProductionRule(const Symbol &left, Sequence &&right, SnippetCallback snippet)
-      : left_(left), right_(std::move(right)), snippet_(std::move(snippet)) {
-  }
+      : left_(left), right_(std::move(right)), snippet_(snippet) {}
 
   ProductionRule(const ProductionRule &) = delete;
   ProductionRule(ProductionRule &&) = default;
@@ -50,10 +48,10 @@ class ProductionRule {
 class Grammar {
  public:
   typedef std::vector<ProductionRule> RuleRecord;
-  typedef std::unordered_multimap<Symbol, const Sequence *const> RuleMap;
+  typedef std::unordered_multimap<Symbol, size_t> RuleMap;
   typedef std::pair<RuleMap::const_iterator, RuleMap::const_iterator> RuleRange;
-  typedef std::unordered_set<Symbol> Table;
-  typedef std::function<void(void *, Token &)> TokenFeeder;
+  typedef std::unordered_set<Symbol> SymbolTable;
+  typedef std::function<void(void *, Token &&)> TokenFeeder;
 
   friend class GrammarBuilder;
 
@@ -75,12 +73,12 @@ class Grammar {
     return rule_map_.equal_range(symbol);
   }
 
-  const Table &AllSymbols() const {
-    return table_;
+  const SymbolTable &symbol_table() const {
+    return symbol_table_;
   }
 
   bool CheckSymbol(Symbol symbol) const {
-    return table_.end() != table_.find(symbol);
+    return symbol_table_.end() != symbol_table_.find(symbol);
   }
 
   const TokenFeeder &token_feeder() const {
@@ -90,33 +88,34 @@ class Grammar {
  private:
   RuleRecord rule_record_;
   RuleMap rule_map_;
-  Table table_;
+  SymbolTable symbol_table_;
   TokenFeeder token_feeder_;
 };
 
 class GrammarBuilder {
  public:
-  GrammarBuilder &SetSymbolTable(Grammar::Table &&table) {
-    grammar_.table_ = table;
+  GrammarBuilder &SetSymbolTable(Grammar::SymbolTable &&table) {
+    grammar_.symbol_table_ = table;
     return *this;
   }
 
   GrammarBuilder &SetTokenFeeder(Grammar::TokenFeeder token_feeder) {
-    grammar_.token_feeder_ = std::move(token_feeder);
+    grammar_.token_feeder_ = token_feeder;
     return *this;
   }
 
   GrammarBuilder &InsertRule(Symbol left,
                              Sequence &&right,
-                             ProductionRule::SnippetCallback f) {
+                             SnippetCallback snippet) {
     assert(left.IsNonTerminal());
-    grammar_.rule_record_.emplace_back(left, std::move(right), std::move(f));
+    grammar_.rule_record_.emplace_back(left, std::move(right), snippet);
     return *this;
   }
 
   Grammar &&Build() {
-    for (auto &rule : grammar_.rule_record_) {
-      grammar_.rule_map_.insert({rule.left(), &rule.right()});
+    for (size_t i = 0; i < grammar_.rule_record_.size(); ++i) {
+      grammar_.rule_map_.insert(std::make_pair(grammar_.rule_record_[i].left(),
+                                               i));
     }
     return std::move(grammar_);
   }

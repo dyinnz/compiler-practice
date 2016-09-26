@@ -75,7 +75,7 @@ TEST_CASE("test extend first set", "[First+]") {
   }
 }
 
-TEST_CASE("test ll table", "[LL Table]") {
+TEST_CASE("test ll table", "[LL SymbolTable]") {
   Grammar grammar = expr_grammar::BuildExprGrammar();
   auto firsts = CalcFirst(grammar);
   auto follows = CalcFollow(grammar, firsts);
@@ -86,7 +86,7 @@ TEST_CASE("test ll table", "[LL Table]") {
 
   REQUIRE(result);
 
-  cout << "========= test LL(1) Table =========" << endl;
+  cout << "========= test LL(1) SymbolTable =========" << endl;
   for (auto &nonterminal_pair : ll_table) {
     auto &nonterminal = nonterminal_pair.first;
     auto &jump_map = nonterminal_pair.second;

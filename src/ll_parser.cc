@@ -19,7 +19,7 @@ extern simple_logger::BaseLogger logger;
 SymbolAuxSet CalcFirst(const Grammar &grammar) {
   SymbolAuxSet firsts;
 
-  for (auto &symbol : grammar.AllSymbols()) {
+  for (auto &symbol : grammar.symbol_table()) {
     if (symbol.IsTerminal()) {
       firsts[symbol] = {symbol};
     } else {
@@ -178,11 +178,11 @@ bool BuildLLTable(const Grammar &grammar, LLTable &ll_table) {
   return BuildLLTable(grammar, extend_firsts, ll_table);
 }
 
-bool LLParser::ProductNonTerminal(StackState &top_state, Token &token) {
+bool LLParser::ProductNonTerminal(StackState &top_state, Token &&token) {
 
   auto jump_list_iter = ll_table_.find(top_state.symbol);
   if (ll_table_.end() == jump_list_iter) {
-    logger.error("wrong LL(1) Table: no such non-terminal symbol {}",
+    logger.error("wrong LL(1) SymbolTable: no such non-terminal symbol {}",
                  top_state.symbol);
     return false;
   }
@@ -215,7 +215,7 @@ bool LLParser::ProductTerminal(void *grammar_data,
 
   } else if (top_state.symbol == token_iter->symbol) {
     // feed a token
-    grammar_.token_feeder()(grammar_data, *token_iter);
+    grammar_.token_feeder()(grammar_data, std::move(*token_iter));
     ++token_iter;
     return true;
 
@@ -252,7 +252,7 @@ bool LLParser::Parse(void *grammar_data, vector<Token> &tokens) {
     } else {
       // product
       if (top_state.symbol.IsNonTerminal()) {
-        if (!ProductNonTerminal(top_state, *token_iter)) {
+        if (!ProductNonTerminal(top_state, move(*token_iter))) {
           result = false;
           break;
         }
