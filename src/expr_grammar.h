@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <stack>
+
 #include "grammar.h"
 #include "tokenizer.h"
 
@@ -36,5 +38,14 @@ std::string to_string(const Symbol &symbol);
 
 Tokenizer BuildExprTokenizer();
 Grammar BuildExprGrammar();
+
+class ExprParserAccept : public ParserAccept {
+ public:
+
+ private:
+  std::shared_ptr<Ast> ast_;
+  std::stack<AstNode*> nodes_stack_;
+};
+
 
 } // end of namespace expr_grammar

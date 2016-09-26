@@ -88,10 +88,7 @@ void TEST_LLParser() {
   vector<Token> tokens;
   tokenizer.LexicalAnalyze(s, tokens);
 
-  bool result = ll_parser.Parse(tokens);
-  auto ast_root = ll_parser.ast()->root();
-
-  PrintASTRecur(ast_root);
+  bool result = ll_parser.Parse(nullptr, tokens);
 }
 
 int main() {

@@ -29,6 +29,7 @@ static const Token kErrorToken{"kErrorToken", kErrorSymbol};
 static const Token kEofToken{"kEofToken", kEofSymbol};
 
 inline std::string to_string(const Token &token) {
-  return '[' + std::to_string(token.symbol.ID()) + ']' + token.str + "("
-      + std::to_string(token.row) + ',' + std::to_string(token.column) + ')';
+  return "Token { T" + std::to_string(token.symbol.ID()) + ", P("
+      + std::to_string(token.row) + ',' + std::to_string(token.column) + "), "
+      + token.str + " }";
 }

@@ -9,6 +9,10 @@
 using std::unordered_multimap;
 using std::unordered_map;
 using std::set;
+using std::vector;
+using std::make_pair;
+using std::pair;
+using std::move;
 
 extern simple_logger::BaseLogger logger;
 
@@ -174,72 +178,101 @@ bool BuildLLTable(const Grammar &grammar, LLTable &ll_table) {
   return BuildLLTable(grammar, extend_firsts, ll_table);
 }
 
-bool LLParser::Parse(std::vector<Token> &tokens) {
-  ast_ = std::make_shared<Ast>();
-  ast_->set_root(ast_->CreateNode(kStartSymbol));
-  stack_.push(ast_->root());
+bool LLParser::ProductNonTerminal(StackState &top_state,
+                                  vector<Token>::iterator &token_iter) {
 
+  logger.debug("current symbol {}", expr_grammar::to_string(top_state.symbol));
+
+  auto jump_list_iter = ll_table_.find(top_state.symbol);
+  if (ll_table_.end() == jump_list_iter) {
+    logger.error("wrong LL(1) Table: no such non-terminal symbol {}",
+                 top_state.symbol);
+    return false;
+  }
+
+  auto rule_index_iter = jump_list_iter->second.find(token_iter->symbol);
+  if (jump_list_iter->second.end() == rule_index_iter) {
+    logger.error("unexpected token {}", to_string(*token_iter));
+    return false;
+  }
+
+  size_t rule_index = rule_index_iter->second;
+  auto &right = grammar_.GetRule(rule_index).right();
+
+  for (auto iter = right.rbegin(); iter != right.rend(); ++iter) {
+    production_stack_.push({*iter, SIZE_MAX, false});
+  }
+
+  top_state.rule_index = rule_index;
+  top_state.is_handled = true;
+
+  return true;
+}
+
+bool LLParser::ProductTerminal(StackState &top_state,
+                               vector<Token>::iterator &token_iter) {
+  if (top_state.symbol == kEpsilonSymbol) {
+    // skip epsilon
+    return true;
+
+  } else if (top_state.symbol == token_iter->symbol) {
+    // feed a token
+    grammar_.token_feeder()(*token_iter);
+    ++token_iter;
+    return true;
+
+  } else {
+    // mismatch
+    logger.error("terminal mismatch: top state {}, candidate {}",
+                 expr_grammar::to_string(top_state.symbol),
+                 expr_grammar::to_string(token_iter->symbol));
+    return false;
+  }
+}
+
+bool LLParser::Parse(void *grammar_data, vector<Token> &tokens) {
   tokens.push_back(kEofToken);
 
-  auto curr_token = tokens.begin();
   bool result = true;
+  auto token_iter = tokens.begin();
 
-  while (!stack_.empty()) {
-    AstNode *top = stack_.top();
-    stack_.pop();
+  production_stack_.push({kStartSymbol, SIZE_MAX, false});
 
-    // logger.debug("current symbol {}", top->symbol());
-    logger.debug("current symbol {}", expr_grammar::to_string(top->symbol()));
+  while (!production_stack_.empty() && token_iter != tokens.end()) {
+    StackState &top_state = production_stack_.top();
 
-    if (!top->symbol().IsTerminal()) {
+    logger.debug("current top symbol: {}",
+                 expr_grammar::to_string(top_state.symbol));
 
-      auto ll_entry_iter = ll_table_.find(top->symbol());
-      if (ll_table_.end() == ll_entry_iter) {
-        logger.error("wrong LL(1) Table: no such non-terminal symbol {}",
-                     top->symbol());
-        result = false;
-        break;
-      }
-
-      auto rule_index_iter = ll_entry_iter->second.find(curr_token->symbol);
-      if (ll_entry_iter->second.end() == rule_index_iter) {
-        logger.error("unexpected token {}", to_string(*curr_token));
-        result = false;
-        break;
-      }
-
-      int rule_index = rule_index_iter->second;
-      auto &right = grammar_.GetRule(rule_index).right();
-
-      for (auto &right_part : right) {
-        top->AddChild(ast_->CreateNode(right_part));
-      }
-
-      for (auto iter = top->children().rbegin(); iter != top->children().rend();
-           ++iter) {
-        stack_.push(*iter);
-      }
+    if (top_state.is_handled) {
+      //  pop
+      grammar_.GetRule(top_state.rule_index).snippet()(grammar_data);
+      production_stack_.pop();
 
     } else {
-      if (top->symbol() == kEpsilonSymbol) {
-        continue;
-
-      }
-      if (top->symbol() == curr_token->symbol) {
-        // top->set_str(std::move(curr_token->str));
-        top->FetchToken(std::move(*curr_token));
-        ++curr_token;
+      // product
+      if (top_state.symbol.IsNonTerminal()) {
+        if (!ProductNonTerminal(top_state, token_iter)) {
+          result = false;
+          break;
+        }
 
       } else {
-        logger.error("terminal unmatched");
-        result = false;
-        break;
+        if (!ProductTerminal(top_state, token_iter)) {
+          result = false;
+          break;
+        }
+        production_stack_.pop();
       }
     }
   }
 
-  if (result && curr_token->symbol == kEofSymbol) {
-    result = true;
+  result = result && token_iter->symbol == kEofSymbol;
+
+  if (result) {
+    logger.debug("parsing finished, accept");
+  } else {
+    logger.error("parsing finished, error");
   }
 
   return result;

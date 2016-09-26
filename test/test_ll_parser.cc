@@ -148,6 +148,6 @@ TEST_CASE("test ll parser", "[LL Parser]") {
   vector<Token> tokens;
   tokenizer.LexicalAnalyze(s, tokens);
 
-  bool result = ll_parser.Parse(tokens);
+  bool result = ll_parser.Parse(nullptr, tokens);
   REQUIRE(result);
 }

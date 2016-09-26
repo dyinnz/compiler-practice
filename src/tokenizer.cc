@@ -73,7 +73,7 @@ Token Tokenizer::GetNextToken(const char *&p) {
     if (next_node) {
       curr_node = next_node;
       s += 1;
-      logger.debug("{}", to_string(*curr_node));
+      // logger.debug("{}", to_string(*curr_node));
 
       if (curr_node->IsEnd()) {
         int priority = curr_node->priority();
@@ -90,7 +90,7 @@ Token Tokenizer::GetNextToken(const char *&p) {
   longest_token.column = p - curr_row_pos_;
   p = s;
 
-  logger.debug("{}:{}", longest_token.symbol, longest_token.str);
+  logger.debug("{}(): {}", __func__, to_string(longest_token));
   return longest_token;
 }
 

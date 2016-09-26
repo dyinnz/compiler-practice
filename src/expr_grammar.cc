@@ -76,6 +76,8 @@ Grammar BuildExprGrammar() {
                           kNumber, kName,
                           kEpsilonSymbol, kEofSymbol, kStartSymbol});
 
+  builder.SetTokenFeeder([](Token &token){ });
+
   builder.InsertRule(kStartSymbol, {kExpr});
 
   builder.InsertRule(kExpr, {kTerm, kExprRecur});
