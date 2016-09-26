@@ -16,7 +16,8 @@ class Tokenizer {
   ~Tokenizer() {
   }
 
-  void BuildTokenizer(const std::vector<std::pair<std::string, Symbol>> &pattern);
+  void BuildTokenizer(const std::vector<std::pair<std::string,
+                                                  Symbol>> &pattern);
 
   const DFA *GetTokenDFA() const {
     return &*token_dfa_;

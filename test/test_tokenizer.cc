@@ -17,8 +17,8 @@ using std::vector;
 
 BaseLogger logger;
 
-static const Symbol k110 {Symbol::kTerminal, kStartID + 1};
-static const Symbol kNumber {Symbol::kTerminal, kStartID + 2};
+static const Symbol k110{Symbol::kTerminal, kStartID + 1};
+static const Symbol kNumber{Symbol::kTerminal, kStartID + 2};
 
 TEST_CASE("test build dfa using vector, two rules", "[Test DFA]") {
   Tokenizer tokenizer;
@@ -68,8 +68,8 @@ TEST_CASE("test one token", "[Test Token]") {
   REQUIRE(s.c_str() + s.length() == p);
 }
 
-static const Symbol kIf {Symbol::kTerminal, kStartID + 3};
-static const Symbol kWord {Symbol::kTerminal, kStartID + 4};
+static const Symbol kIf{Symbol::kTerminal, kStartID + 3};
+static const Symbol kWord{Symbol::kTerminal, kStartID + 4};
 
 TEST_CASE("test lexical analyse", "[Test Analyse]") {
   // logger.set_log_level(kDebug);

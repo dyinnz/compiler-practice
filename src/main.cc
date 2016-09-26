@@ -31,8 +31,8 @@ void Example() {
 }
 
 void TEST_Tokenizer() {
-  const Symbol k110 {Symbol::kTerminal, kStartID + 1};
-  const Symbol kNumber {Symbol::kTerminal, kStartID + 2};
+  const Symbol k110{Symbol::kTerminal, kStartID + 1};
+  const Symbol kNumber{Symbol::kTerminal, kStartID + 2};
 
   Tokenizer tokenizer;
   tokenizer.BuildTokenizer({{"110", k110},
@@ -70,7 +70,7 @@ void PrintASTRecur(AstNode *node, size_t deep = 0) {
   cout << to_string(node->symbol()) << ":" << node->str() << std::endl;
 
   for (auto child : node->children()) {
-    PrintASTRecur(child, deep+1);
+    PrintASTRecur(child, deep + 1);
   }
 }
 
@@ -88,7 +88,14 @@ void TEST_LLParser() {
   vector<Token> tokens;
   tokenizer.LexicalAnalyze(s, tokens);
 
-  bool result = ll_parser.Parse(nullptr, tokens);
+  auto expr_data = expr_grammar::CreateGrammarData();
+
+  bool result = ll_parser.Parse(expr_data.get(), tokens);
+
+  cout << expr_data->node_record().size() << endl;
+  for (auto node : expr_data->node_record()) {
+    PrintASTRecur(node, 0);
+  }
 }
 
 int main() {

@@ -42,10 +42,11 @@ class LLParser {
   bool Parse(void *grammar_data, std::vector<Token> &tokens);
 
  private:
-  bool ProductTerminal(StackState &top_state,
+  bool ProductTerminal(void *grammar_data,
+                       StackState &top_state,
                        std::vector<Token>::iterator &token_iter);
   bool ProductNonTerminal(StackState &top_state,
-                            std::vector<Token>::iterator &token_iter);
+                          Token &token);
 
  private:
   const Grammar &grammar_;

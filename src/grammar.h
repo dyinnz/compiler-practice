@@ -18,9 +18,6 @@
 
 typedef std::vector<Symbol> Sequence;
 
-class ParserAccept {
-};
-
 class ProductionRule {
  public:
   typedef std::function<void(void *)> SnippetCallback;
@@ -56,7 +53,7 @@ class Grammar {
   typedef std::unordered_multimap<Symbol, const Sequence *const> RuleMap;
   typedef std::pair<RuleMap::const_iterator, RuleMap::const_iterator> RuleRange;
   typedef std::unordered_set<Symbol> Table;
-  typedef std::function<void(Token &)> TokenFeeder;
+  typedef std::function<void(void *, Token &)> TokenFeeder;
 
   friend class GrammarBuilder;
 
@@ -104,23 +101,16 @@ class GrammarBuilder {
     return *this;
   }
 
-  GrammarBuilder &SetTokenFeeder(Grammar::TokenFeeder &&token_feeder) {
+  GrammarBuilder &SetTokenFeeder(Grammar::TokenFeeder token_feeder) {
     grammar_.token_feeder_ = std::move(token_feeder);
     return *this;
   }
 
-  GrammarBuilder &InsertRule(Symbol left, Sequence &&right) {
+  GrammarBuilder &InsertRule(Symbol left,
+                             Sequence &&right,
+                             ProductionRule::SnippetCallback f) {
     assert(left.IsNonTerminal());
-    grammar_.rule_record_.emplace_back(left,
-                                       std::move(right),
-                                       [](void *p) {});
-    return *this;
-  }
-
-  template<class F>
-  GrammarBuilder &InsertRule(Symbol left, Sequence &&right, F &&f) {
-    assert(left.IsNonTerminal());
-    grammar_.rule_record_.emplace_back(left, std::move(right), f);
+    grammar_.rule_record_.emplace_back(left, std::move(right), std::move(f));
     return *this;
   }
 

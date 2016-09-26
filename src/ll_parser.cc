@@ -178,10 +178,7 @@ bool BuildLLTable(const Grammar &grammar, LLTable &ll_table) {
   return BuildLLTable(grammar, extend_firsts, ll_table);
 }
 
-bool LLParser::ProductNonTerminal(StackState &top_state,
-                                  vector<Token>::iterator &token_iter) {
-
-  logger.debug("current symbol {}", expr_grammar::to_string(top_state.symbol));
+bool LLParser::ProductNonTerminal(StackState &top_state, Token &token) {
 
   auto jump_list_iter = ll_table_.find(top_state.symbol);
   if (ll_table_.end() == jump_list_iter) {
@@ -190,9 +187,9 @@ bool LLParser::ProductNonTerminal(StackState &top_state,
     return false;
   }
 
-  auto rule_index_iter = jump_list_iter->second.find(token_iter->symbol);
+  auto rule_index_iter = jump_list_iter->second.find(token.symbol);
   if (jump_list_iter->second.end() == rule_index_iter) {
-    logger.error("unexpected token {}", to_string(*token_iter));
+    logger.error("unexpected token {}", to_string(token));
     return false;
   }
 
@@ -209,7 +206,8 @@ bool LLParser::ProductNonTerminal(StackState &top_state,
   return true;
 }
 
-bool LLParser::ProductTerminal(StackState &top_state,
+bool LLParser::ProductTerminal(void *grammar_data,
+                               StackState &top_state,
                                vector<Token>::iterator &token_iter) {
   if (top_state.symbol == kEpsilonSymbol) {
     // skip epsilon
@@ -217,7 +215,7 @@ bool LLParser::ProductTerminal(StackState &top_state,
 
   } else if (top_state.symbol == token_iter->symbol) {
     // feed a token
-    grammar_.token_feeder()(*token_iter);
+    grammar_.token_feeder()(grammar_data, *token_iter);
     ++token_iter;
     return true;
 
@@ -241,8 +239,10 @@ bool LLParser::Parse(void *grammar_data, vector<Token> &tokens) {
   while (!production_stack_.empty() && token_iter != tokens.end()) {
     StackState &top_state = production_stack_.top();
 
+    /*
     logger.debug("current top symbol: {}",
                  expr_grammar::to_string(top_state.symbol));
+                 */
 
     if (top_state.is_handled) {
       //  pop
@@ -252,13 +252,13 @@ bool LLParser::Parse(void *grammar_data, vector<Token> &tokens) {
     } else {
       // product
       if (top_state.symbol.IsNonTerminal()) {
-        if (!ProductNonTerminal(top_state, token_iter)) {
+        if (!ProductNonTerminal(top_state, *token_iter)) {
           result = false;
           break;
         }
 
       } else {
-        if (!ProductTerminal(top_state, token_iter)) {
+        if (!ProductTerminal(grammar_data, top_state, token_iter)) {
           result = false;
           break;
         }

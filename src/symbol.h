@@ -37,6 +37,10 @@ class Symbol {
     return id_ == rhs.id_ && type_ == rhs.type_;
   }
 
+  bool operator!=(const Symbol &rhs) const {
+    return !this->operator==(rhs);
+  }
+
  private:
   Type type_;
   int id_;
@@ -63,6 +67,6 @@ static const Symbol kEofSymbol{Symbol::kTerminal, kEofID};
 static const Symbol kEpsilonSymbol{Symbol::kTerminal, kEpsilonID};
 static const Symbol kStartSymbol{Symbol::kNonTerminal, kStartID};
 
-inline std::ostream& operator<<(std::ostream &os, const Symbol &symbol) {
+inline std::ostream &operator<<(std::ostream &os, const Symbol &symbol) {
   return os << '[' << symbol.ID() << ']';
 }

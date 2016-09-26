@@ -39,13 +39,23 @@ std::string to_string(const Symbol &symbol);
 Tokenizer BuildExprTokenizer();
 Grammar BuildExprGrammar();
 
-class ExprParserAccept : public ParserAccept {
+class ExprGrammarData {
  public:
+  ExprGrammarData() : ast_(std::make_shared<Ast>()) {}
+
+  std::vector<AstNode *> &node_record() {
+    return node_record_;
+  }
+
+  std::shared_ptr<Ast> ast() {
+    return ast_;
+  }
 
  private:
   std::shared_ptr<Ast> ast_;
-  std::stack<AstNode*> nodes_stack_;
+  std::vector<AstNode *> node_record_;
 };
 
+std::shared_ptr<ExprGrammarData> CreateGrammarData();
 
 } // end of namespace expr_grammar

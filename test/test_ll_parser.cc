@@ -102,7 +102,6 @@ TEST_CASE("test ll table", "[LL Table]") {
   }
 }
 
-
 TEST_CASE("test expr tokenizer", "[Expr Tokenizer]") {
   using namespace expr_grammar;
 
@@ -148,6 +147,8 @@ TEST_CASE("test ll parser", "[LL Parser]") {
   vector<Token> tokens;
   tokenizer.LexicalAnalyze(s, tokens);
 
-  bool result = ll_parser.Parse(nullptr, tokens);
+  auto expr_data = CreateGrammarData();
+
+  bool result = ll_parser.Parse(expr_data.get(), tokens);
   REQUIRE(result);
 }
