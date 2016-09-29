@@ -54,9 +54,8 @@ string to_string(const Symbol &symbol) {
 }
 
 Tokenizer BuildExprTokenizer() {
-  Tokenizer tokenizer;
-
-  tokenizer.BuildTokenizer(
+  TokenizerBuilder tokenizer_builder;
+  tokenizer_builder.SetPatterns(
       {{R"(\()", kLeftParen},
        {R"(\))", kRightParen},
        {R"(\+)", kAdd},
@@ -65,9 +64,10 @@ Tokenizer BuildExprTokenizer() {
        {R"(\*)", kMul},
        {R"(\d+)", kNumber},
        {R"([A-Za-z_]\w*)", kName},
+       {"[ \r\v\t\f]", kSpaceSymbol},
       });
 
-  return tokenizer;
+  return tokenizer_builder.Build();
 }
 
 std::shared_ptr<ExprGrammarData> CreateGrammarData() {

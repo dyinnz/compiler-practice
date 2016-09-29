@@ -11,52 +11,58 @@ using std::pair;
 
 extern simple_logger::BaseLogger logger;
 
-void Tokenizer::BuildTokenizer(const vector<pair<string, Symbol>> &pattern) {
-  RegexParser re_parser;
-  NFAComponent *result_comp = nullptr;
-
-  ResetPriority();
-
-  for (auto &p : pattern) {
-    const string &s = p.first;
-    auto symbol = p.second;
-
-    NFAComponent *comp = re_parser.ParseToNFAComponent(s);
-    if (!comp) {
-      logger.error("{}(): nullptr NFAComponent pointer", __func__);
-      return;
-    }
-
-    int priority = NextPriority();
-    priority_to_symbol.push_back(symbol);
-    comp->end()->set_priority(priority);
-
-    if (result_comp) {
-      result_comp = re_parser.GetNFAManager().UnionWithMultiEnd(result_comp,
-                                                                comp);
-    } else {
-      result_comp = comp;
-    }
+bool Tokenizer::MatchString(const char *p, const std::string &str) {
+  if (str.empty()) {
+    return false;
   }
 
-  auto token_nfa = re_parser.GetNFAManager().BuildNFA(result_comp);
-
-  auto normal_dfa = ConvertNFAToDFA(token_nfa);
-
-  token_dfa_ = normal_dfa;
-
-  logger.log("finish build");
+  size_t i = 0;
+  while (i < str.size() && p + i < end_) {
+    if (p[i] != str[i]) {
+      return false;
+    }
+    i += 1;
+  }
+  return (p + i) <= end_ && i == str.size();
 }
 
-const char *Tokenizer::SkipSpace(const char *p) {
-  while (p != end_ && isspace(*p)) {
-    if ('\n' == *p) {
+const char *Tokenizer::SkipComment(const char *p) {
+  if (MatchString(p, line_comment_start_)) {
+    p += line_comment_start_.size();
+
+    while (p < end_ && *p != '\n') {
+      p += 1;
+    }
+    if (p < end_) {
+      // get a LF
       curr_row_ += 1;
       curr_row_pos_ = p + 1;
+      return p + 1;
+    } else {
+      // get EOF
+      return p;
     }
-    p += 1;
+
+  } else if (MatchString(p, block_comment_start_)) {
+    p += block_comment_start_.size();
+
+    while (p < end_ && !MatchString(p, block_comment_end_)) {
+      if (*p == '\n') {
+        // get a LF
+        curr_row_ += 1;
+        curr_row_pos_ = p + 1;
+      }
+      p += 1;
+    }
+    if (p < end_) {
+      return p + block_comment_end_.size();
+    } else {
+      return p;
+    }
+
+  } else {
+    return p;
   }
-  return p;
 }
 
 Token Tokenizer::GetNextToken(const char *&p) {
@@ -77,7 +83,7 @@ Token Tokenizer::GetNextToken(const char *&p) {
 
       if (curr_node->IsEnd()) {
         int priority = curr_node->priority();
-        longest_token.symbol = priority_to_symbol[priority];
+        longest_token.symbol = priority_to_symbol_[priority];
       }
 
     } else {
@@ -109,16 +115,91 @@ bool Tokenizer::LexicalAnalyze(const char *beg,
 
   curr_ = beg;
   while (true) {
-    curr_ = SkipSpace(curr_);
+    curr_ = SkipComment(curr_);
     if (curr_ >= end_) break;
 
     Token token = GetNextToken(curr_);
-    if (token == kErrorToken) {
+
+    // error
+    if (token.symbol == kErrorSymbol) {
+      logger.error("could not get next token at ({}, {})",
+                   curr_row_,
+                   curr_ - curr_row_pos_);
       return false;
-    } else {
-      tokens.push_back(move(token));
+    }
+    // record line no.
+    if (token.symbol == kLFSymbol) {
+      curr_row_ += 1;
+      curr_row_pos_ = curr_;
+    }
+    // skip ignored token
+    if (ignore_set_.end() == ignore_set_.find(token.symbol)) {
+      if (!(token.symbol == kLFSymbol && tokens.back().symbol == kLFSymbol)) {
+        tokens.push_back(move(token));
+      }
     }
   }
 
   return true;
+}
+
+TokenizerBuilder &
+TokenizerBuilder::SetPatterns(const std::vector<TokenPattern> &patterns) {
+  ResetPriority();
+
+  RegexParser re_parser;
+  vector<Symbol> priority_to_symbol(patterns.size());
+  NFAComponent *result_comp = nullptr;
+
+  for (auto &p : patterns) {
+    auto &s = p.first;
+    auto symbol = p.second;
+
+    NFAComponent *comp = re_parser.ParseToNFAComponent(s);
+    if (!comp) {
+      logger.error("{}(): nullptr NFAComponent pointer", __func__);
+      return *this;
+    }
+
+    int next_priority = NextPriority();
+    comp->end()->set_priority(next_priority);
+    priority_to_symbol[next_priority] = symbol;
+
+    if (!result_comp) {
+      result_comp = comp;
+    } else {
+      result_comp =
+          re_parser.GetNFAManager().UnionWithMultiEnd(result_comp, comp);
+    }
+  }
+
+  auto token_nfa = re_parser.GetNFAManager().BuildNFA(result_comp);
+  if (!token_nfa) {
+    is_error_ = true;
+    return *this;
+  }
+
+  auto normal_dfa = ConvertNFAToDFA(token_nfa);
+  if (!normal_dfa) {
+    is_error_ = true;
+    return *this;
+  }
+
+  auto min_dfa = MinimizeDFA(normal_dfa);
+  if (!min_dfa) {
+    is_error_ = true;
+    return *this;
+  }
+
+  tokenizer_.priority_to_symbol_ = std::move(priority_to_symbol);
+  tokenizer_.token_dfa_ = min_dfa;
+
+  return *this;
+}
+
+Tokenizer TokenizerBuilder::Build() {
+  if (tokenizer_.ignore_set_.empty()) {
+    tokenizer_.ignore_set_.insert(kSpaceSymbol);
+  }
+  return std::move(tokenizer_);
 }

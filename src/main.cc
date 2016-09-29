@@ -10,8 +10,10 @@
 #include "finite_automaton.h"
 #include "regex_parser.h"
 #include "tokenizer.h"
-#include "expr_grammar.h"
 #include "ll_parser.h"
+
+#include "expr_grammar.h"
+#include "golike_grammar.h"
 
 using namespace std;
 using namespace simple_logger;
@@ -28,15 +30,6 @@ void Example() {
 
   cout << dfa->Match("527621747@test.qq.cn") << endl;
   cout << dfa->Match("ml_143@test.qq.com") << endl;
-}
-
-void TEST_Tokenizer() {
-  const Symbol k110{Symbol::kTerminal, kStartID + 1};
-  const Symbol kNumber{Symbol::kTerminal, kStartID + 2};
-
-  Tokenizer tokenizer;
-  tokenizer.BuildTokenizer({{"110", k110},
-                            {"[0123]+", kNumber}});
 }
 
 void TEST_ExprGrammar() {
@@ -96,6 +89,9 @@ void TEST_LLParser() {
   for (auto node : expr_data->node_record()) {
     PrintASTRecur(node, 0);
   }
+}
+
+void TEST_AnsiC() {
 }
 
 int main() {
