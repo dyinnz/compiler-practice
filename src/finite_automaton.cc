@@ -250,23 +250,23 @@ class DFAOptimizer {
 
 // implement
 void DFAOptimizer::InitPartition() {
-  partition_.emplace_back();
-  partition_.emplace_back();
+  unordered_map<int, NumberSet> part_map;
 
-  NumberSet &start_set = partition_.front();
-  NumberSet &end_set = partition_.back();
+  auto create_insert = [&](int priority, int number) {
+    auto iter = part_map.find(priority);
+    if (part_map.end() == iter) {
+      iter = part_map.emplace(priority, NumberSet()).first;
+    }
+    iter->second.insert(number);
+  };
 
   for (size_t i = 0; i < normal_->size(); ++i) {
-    const DFANode *node = normal_->GetNode(i);
-    if (node->IsEnd()) {
-      end_set.insert(node->number());
-    } else {
-      start_set.insert(node->number());
-    }
+    auto *node = normal_->GetNode(i);
+    create_insert(node->priority(), node->number());
   }
 
-  if (start_set.empty()) {
-    partition_.pop_front();
+  for (auto &p : part_map) {
+    partition_.push_back(p.second);
   }
 }
 
