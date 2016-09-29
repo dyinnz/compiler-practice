@@ -9,8 +9,6 @@
 
 namespace golike_grammar {
 
-constexpr int kStartID = 10000;
-
 /**
  * 16 keywords, 9 unsupported keywords
  */

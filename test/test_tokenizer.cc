@@ -17,12 +17,17 @@ using std::vector;
 
 BaseLogger logger;
 
-static const Symbol k110{Symbol::kTerminal, kStartID + 1001};
-static const Symbol kNumber{Symbol::kTerminal, kStartID + 1002};
-static const Symbol kIf{Symbol::kTerminal, kStartID + 1003};
-static const Symbol kWord{Symbol::kTerminal, kStartID + 1004};
+#define DEF_TEST_TERMINAL(name, offset) \
+static const Symbol name(Symbol::kTerminal, kStartID + (offset));
 
-TEST_CASE("test build DFA", "[Test DFA]") {
+/*----------------------------------------------------------------------------*/
+
+DEF_TEST_TERMINAL(k110, 1);
+DEF_TEST_TERMINAL(kNumber, 2);
+DEF_TEST_TERMINAL(kIf, 3);
+DEF_TEST_TERMINAL(kWord, 4);
+
+TEST_CASE("Build DFA") {
   TokenizerBuilder tokenizer_builder;
   tokenizer_builder.SetPatterns(
       {{"110", k110},
@@ -35,14 +40,14 @@ TEST_CASE("test build DFA", "[Test DFA]") {
   REQUIRE_FALSE(dfa->Match("1104"));
 }
 
-TEST_CASE("test lexical analyse", "[Test Analyse]") {
+TEST_CASE("Lexical analyse") {
   TokenizerBuilder tokenizer_builder;
   tokenizer_builder.SetPatterns({{"if", kIf},
-                                {R"(\d+)", kNumber},
-                                {R"(\w+)", kWord},
-                                {"[ \t\v\f\r]", kSpaceSymbol},
-                                {"\n", kLFSymbol}
-                               });
+                                 {R"(\d+)", kNumber},
+                                 {R"(\w+)", kWord},
+                                 {"[ \t\v\f\r]", kSpaceSymbol},
+                                 {"\n", kLFSymbol}
+                                });
   auto tokenizer = tokenizer_builder.Build();
 
   string s{"if there\tare\n\n1000 dogs"};
@@ -82,3 +87,28 @@ TEST_CASE("test lexical analyse", "[Test Analyse]") {
   REQUIRE(tokens[5].column == 5);
 }
 
+TEST_CASE("Skip comments") {
+  logger.set_log_level(kDebug);
+
+  TokenizerBuilder tokenizer_builder;
+  tokenizer_builder.SetPatterns({{R"(\w+)", kNumber},
+                                 {"[ \t\v\f\r]", kSpaceSymbol},
+                                 {"\n", kLFSymbol},
+                                });
+  tokenizer_builder.SetLineComment("//");
+  tokenizer_builder.SetBlockComment("/*", "*/");
+
+  string s(
+      "hello // world\n"
+      "/* test block 1 \n"
+      " test block 2 */\n"
+      "computer world"
+  );
+
+  auto tokenizer = tokenizer_builder.Build();
+  vector<Token> tokens;
+  bool result = tokenizer.LexicalAnalyze(s, tokens);
+  for (auto &token : tokens) {
+    logger.debug("{}", to_string(token));
+  }
+}

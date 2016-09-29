@@ -7,12 +7,12 @@
 #include <climits>
 #include <ostream>
 
-constexpr int kErrorID = CHAR_MAX + 1;
-constexpr int kEofID = CHAR_MAX + 2;
-constexpr int kEpsilonID = CHAR_MAX + 3;
-constexpr int kSpaceID = CHAR_MAX + 4;
-constexpr int kLFID = CHAR_MAX + 5;
-constexpr int kStartID = CHAR_MAX + 6;
+constexpr int kStartID = 10000;
+constexpr int kErrorID = kStartID - 1;
+constexpr int kEofID = kStartID - 2;
+constexpr int kEpsilonID = kStartID - 3;
+constexpr int kSpaceID = kStartID - 4;
+constexpr int kLFID = kStartID - 5;
 
 #define DECLARE_SYMBOL(name, index) \
 constexpr int name##ID = kStartID + (index); \
@@ -72,12 +72,12 @@ struct hash<Symbol> {
 
 } // end of namespace std
 
+static const Symbol kStartSymbol{Symbol::kNonTerminal, kStartID};
 static const Symbol kErrorSymbol(Symbol::kTerminal, kErrorID);
 static const Symbol kEofSymbol(Symbol::kTerminal, kEofID);
 static const Symbol kEpsilonSymbol(Symbol::kTerminal, kEpsilonID);
 static const Symbol kSpaceSymbol(Symbol::kTerminal, kSpaceID);
 static const Symbol kLFSymbol(Symbol::kTerminal, kLFID);
-static const Symbol kStartSymbol{Symbol::kNonTerminal, kStartID};
 
 inline std::ostream &operator<<(std::ostream &os, const Symbol &symbol) {
   if (symbol.IsTerminal()) {

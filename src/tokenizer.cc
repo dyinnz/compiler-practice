@@ -115,7 +115,12 @@ bool Tokenizer::LexicalAnalyze(const char *beg,
 
   curr_ = beg;
   while (true) {
-    curr_ = SkipComment(curr_);
+    const char *new_curr_ = curr_;
+    do {
+      curr_ = new_curr_;
+      new_curr_ = SkipComment(curr_);
+    } while (curr_ != new_curr_);
+
     if (curr_ >= end_) break;
 
     Token token = GetNextToken(curr_);
