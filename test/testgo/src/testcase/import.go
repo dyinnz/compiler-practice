@@ -1,12 +1,12 @@
 package testcase
 
 import (
-  "simple_add"
-  "simple_sub"
+	"simpleadd"
+	"simplesub"
 )
 
 func TestImport() int {
-  sum := simple_add.Add(1, 2)
-  sub := simple_sub.Sub(1, 2)
-  return sum * sub
+	sum := simpleadd.Add(1, 2)
+	sub := simplesub.Sub(1, 2)
+	return sum * sub
 }

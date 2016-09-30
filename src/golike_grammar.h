@@ -47,26 +47,24 @@ DECLARE_SYMBOL(kVar, 35)
  */
 DECLARE_SYMBOL(kIdentifier, 40)
 
+/**
+ * Value
+ */
+DECLARE_SYMBOL(kIntValue, 41)
+DECLARE_SYMBOL(kFloat32Value, 42)
+DECLARE_SYMBOL(kStringValue, 43)
 
 /**
  * basic type
  */
-DECLARE_SYMBOL(kIntType, 41)
-DECLARE_SYMBOL(kFloatType, 42)
-DECLARE_SYMBOL(kStringType, 43)
-
-
-/**
- * Value
- */
-DECLARE_SYMBOL(kIntValue, 51)
-DECLARE_SYMBOL(kFloatValue, 52)
-DECLARE_SYMBOL(kStringValue, 53)
+DECLARE_SYMBOL(kIntType, 51)
+DECLARE_SYMBOL(kFloat32Type, 52)
+DECLARE_SYMBOL(kStringType, 53)
 
 /**
  * Line Feed
  */
-DECLARE_SYMBOL(kLF, 60)
+DECLARE_SYMBOL(kLF, '\n')
 
 /**
  * one-char operator
@@ -114,16 +112,16 @@ DECLARE_SYMBOL(kGE, 71) // >=
 DECLARE_SYMBOL(kEQ, 72) // ==
 DECLARE_SYMBOL(kNE, 73) // !=
 
-DECLARE_SYMBOL(kLeftAssign, 81) // <<=
-DECLARE_SYMBOL(kRightAssign, 82) // >>=
-DECLARE_SYMBOL(kAddAssign, 83)  // +=
-DECLARE_SYMBOL(kSubAssign, 84) // -=
-DECLARE_SYMBOL(kMulAssign, 85) // *=
-DECLARE_SYMBOL(kDivAssign, 86) // /=
-DECLARE_SYMBOL(kModAssign, 87) // %=
-DECLARE_SYMBOL(kXorAssign, 88) // ^=
-DECLARE_SYMBOL(kAndAssign, 89) // &=
-DECLARE_SYMBOL(kOrAssign, 90)  // |=
+DECLARE_SYMBOL(kLeftAssign, 80) // <<=
+DECLARE_SYMBOL(kRightAssign, 81) // >>=
+DECLARE_SYMBOL(kAddAssign, 82)  // +=
+DECLARE_SYMBOL(kSubAssign, 83) // -=
+DECLARE_SYMBOL(kMulAssign, 84) // *=
+DECLARE_SYMBOL(kDivAssign, 85) // /=
+DECLARE_SYMBOL(kModAssign, 86) // %=
+DECLARE_SYMBOL(kXorAssign, 87) // ^=
+DECLARE_SYMBOL(kAndAssign, 88) // &=
+DECLARE_SYMBOL(kOrAssign, 89)  // |=
 
 /**
  * @brief   build tokenizer

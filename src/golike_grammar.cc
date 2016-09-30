@@ -45,18 +45,18 @@ TERMINAL(kVar)
 TERMINAL(kIdentifier)
 
 /**
- * basic type
- */
-TERMINAL(kIntType)
-TERMINAL(kFloatType)
-TERMINAL(kStringType)
-
-/**
  * Value
  */
 TERMINAL(kIntValue)
-TERMINAL(kFloatValue)
+TERMINAL(kFloat32Value)
 TERMINAL(kStringValue)
+
+/**
+ * basic type
+ */
+TERMINAL(kIntType)
+TERMINAL(kFloat32Type)
+TERMINAL(kStringType)
 
 /**
  * Line Feed
@@ -121,7 +121,79 @@ TERMINAL(kAndAssign) // &=
 TERMINAL(kOrAssign)  // |=
 
 Tokenizer BuildGolikeTokenizer() {
-  return Tokenizer();
+  TokenizerBuilder tokenizer_builder;
+  tokenizer_builder
+      .SetLineComment("//")
+      .SetBlockComment("/*", "*/")
+      .SetIgnoreSet({kSpaceSymbol})
+      .SetPatterns(
+          {
+              {"[ \v\r\f\t]", kSpaceSymbol},
+              {"\n", kLFSymbol},
+              {"break", kBreak},
+              {"case", kCase},
+              {"const", kConst},
+              {"default", kDefault},
+              {"else", kElse},
+              {"for", kFor},
+              {"func", kFunc},
+              {"goto", kGoto},
+              {"if", kIf},
+              {"import", kImport},
+              {"package", kPackage},
+              {"struct", kStruct},
+              {"switch", kSwitch},
+              {"type", kType},
+              {"var", kVar},
+              {"{", kLeftBrace},
+              {"}", kRightParen},
+              {R"(\()", kLeftParen},
+              {R"(\))", kRightParen},
+              {R"(\[)", kLeftSquare},
+              {R"(\])", kRightSquare},
+              {R"(\.)", kDot},
+              {",", kComma},
+              {":", kColon},
+              {";", kSemicolon},
+              {"=", kAssign},
+              {R"(\+)", kAdd},
+              {"-", kSub},
+              {R"(\*)", kMul},
+              {"/", kDiv},
+              {"%", kMod},
+              {"&", kBitAnd},
+              {R"(\|)", kBitOr},
+              {"^", kBitOr},
+              {"!", kLogicalNegative},
+              {"<", kLT},
+              {">", kGT},
+              {"<<", kLeftShift},
+              {">>", kRightShift},
+              {R"(\+\+)", kInc},
+              {"--", kDec},
+              {"&&", kLogicalAnd},
+              {R"(\|\|)", kLogicalOr},
+              {"<=", kLE},
+              {">=", kGE},
+              {"==", kEQ},
+              {"!=", kNE},
+              {"<<=", kLeftAssign},
+              {">>=", kRightAssign},
+              {R"(\+=)", kAddAssign},
+              {"-=", kSubAssign},
+              {R"(\*=)", kMulAssign},
+              {"/=", kDivAssign},
+              {"%=", kModAssign},
+              {"^=", kXorAssign},
+              {"&=", kAndAssign},
+              {R"(\|=)", kOrAssign},
+              {R"(\w(\w|\d)*)", kIdentifier},
+              {R"(\d+\.\d*|\.\d+)", kFloat32Value},
+              {R"(\d+)", kIntValue},
+              {R"("[^"]*")", kIntValue},
+          });
+  assert(!tokenizer_builder.IsError());
+  return tokenizer_builder.Build();
 }
 
 } // end of namespace golike_grammar

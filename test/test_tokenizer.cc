@@ -100,9 +100,9 @@ TEST_CASE("Skip comments") {
 
   string s(
       "hello // world\n"
-      "/* test block 1 \n"
-      " test block 2 */\n"
-      "computer world"
+          "/* test block 1 \n"
+          " test block 2 */\n"
+          "computer world"
   );
 
   auto tokenizer = tokenizer_builder.Build();

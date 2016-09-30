@@ -107,6 +107,8 @@ bool Tokenizer::LexicalAnalyze(const string &s, vector<Token> &tokens) {
 bool Tokenizer::LexicalAnalyze(const char *beg,
                                const char *end,
                                vector<Token> &tokens) {
+  assert(token_dfa_);
+
   beg_ = beg;
   end_ = end;
 

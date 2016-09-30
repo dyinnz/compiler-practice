@@ -61,7 +61,7 @@ void TestTokenizeFile(const string &path) {
 
   REQUIRE(data);
 
-  auto tokenizer = BuildGolikeTokenizer();
+  static auto tokenizer = BuildGolikeTokenizer();
   std::vector<Token> tokens;
   tokenizer.LexicalAnalyze(data, data + size, tokens);
 
@@ -85,11 +85,12 @@ TEST_CASE("Tokenize for basic type") {
 
   auto tokenizer = BuildGolikeTokenizer();
   std::vector<Token> tokens;
-  tokenizer.LexicalAnalyze(data, data + size, tokens);
+  auto result = tokenizer.LexicalAnalyze(data, data + size, tokens);
 
+  REQUIRE(result);
   REQUIRE(0 != tokens.size());
   for (auto &token : tokens) {
-    logger.log("{}", to_string(token));
+    logger.debug("{}", to_string(token));
   }
 }
 
@@ -115,4 +116,20 @@ TEST_CASE("Tokenize for switch") {
 
 TEST_CASE("Tokenize for var") {
   TestTokenizeFile("testcase/var.go");
+}
+
+TEST_CASE("Tokenizer for main") {
+  TestTokenizeFile("main/hellogo.go");
+}
+
+TEST_CASE("Tokenizer for add") {
+  TestTokenizeFile("simpleadd/add.go");
+}
+
+TEST_CASE("Tokenizer for sub") {
+  TestTokenizeFile("simplesub/sub.go");
+}
+
+TEST_CASE("Tokenizer for comment") {
+  TestTokenizeFile("testcase/comment.go");
 }

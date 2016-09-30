@@ -13,7 +13,6 @@
 #include "ll_parser.h"
 
 #include "expr_grammar.h"
-#include "golike_grammar.h"
 
 using namespace std;
 using namespace simple_logger;

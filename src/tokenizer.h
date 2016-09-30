@@ -98,7 +98,7 @@ class TokenizerBuilder {
 
  private:
   Tokenizer tokenizer_;
-  int priority_index_ {0};
-  bool is_error_ {false};
+  int priority_index_{0};
+  bool is_error_{false};
 };
 
