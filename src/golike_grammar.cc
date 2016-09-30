@@ -120,4 +120,8 @@ TERMINAL(kXorAssign) // ^=
 TERMINAL(kAndAssign) // &=
 TERMINAL(kOrAssign)  // |=
 
+Tokenizer BuildGolikeTokenizer() {
+  return Tokenizer();
+}
+
 } // end of namespace golike_grammar

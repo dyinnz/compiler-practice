@@ -129,6 +129,6 @@ DECLARE_SYMBOL(kOrAssign, 90)  // |=
  * @brief   build tokenizer
  * @return  a tokenizer
  */
-Tokenizer BuildAnsiCTokenizer();
+Tokenizer BuildGolikeTokenizer();
 
 } // end of golike_grammar
