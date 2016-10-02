@@ -54,7 +54,6 @@ DECLARE_SYMBOL(kIntLit, 41)
 DECLARE_SYMBOL(kFloatLit, 42)
 DECLARE_SYMBOL(kStringLit, 43)
 
-
 /**
  * one-char operator
  */
@@ -69,7 +68,6 @@ DECLARE_CHAR_SYMBOL(kDot, '.')
 DECLARE_CHAR_SYMBOL(kComma, ',')
 DECLARE_CHAR_SYMBOL(kColon, ':')
 DECLARE_CHAR_SYMBOL(kSemicolon, ';')
-
 DECLARE_CHAR_SYMBOL(kAssign, '=')
 
 DECLARE_CHAR_SYMBOL(kAdd, '+')
@@ -141,17 +139,13 @@ DECLARE_SYMBOL(kParameterRecur, 226)
 // Statement
 DECLARE_SYMBOL(kBlock, 240)
 DECLARE_SYMBOL(kStatement, 241)
-DECLARE_SYMBOL(kStatementRecur, 242)
+DECLARE_SYMBOL(kStmtRecur, 242)
 DECLARE_SYMBOL(kStmtList, 243)
-DECLARE_SYMBOL(kStmtListRecur, 244)
 
 // Statement -- single line
-DECLARE_SYMBOL(kSimpleStmt, 251)
-DECLARE_SYMBOL(kLabeledStmt, 252)
 DECLARE_SYMBOL(kReturnStmt, 253)
 DECLARE_SYMBOL(kGotoStmt, 254)
 
-DECLARE_SYMBOL(kEmptyStmt, 255)
 DECLARE_SYMBOL(kIncDecStmt, 256)
 DECLARE_SYMBOL(kIncDecTail, 257)
 DECLARE_SYMBOL(kAssignStmt, 258)
@@ -166,7 +160,7 @@ DECLARE_SYMBOL(kElseTail, 284)
 
 DECLARE_SYMBOL(kSwitchStmt, 290)
 DECLARE_SYMBOL(kSwitchHead, 291)
-DECLARE_SYMBOL(kCaseClauseRecur, 292)
+DECLARE_SYMBOL(kCaseRecur, 292)
 
 DECLARE_SYMBOL(kForStmt, 293)
 DECLARE_SYMBOL(kForHead, 294)

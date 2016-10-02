@@ -148,9 +148,8 @@ NON_TERMINAL(kParameterRecur)
 // Statement
 NON_TERMINAL(kBlock)
 NON_TERMINAL(kStatement)
-NON_TERMINAL(kStatementRecur)
+NON_TERMINAL(kStmtRecur)
 NON_TERMINAL(kStmtList)
-NON_TERMINAL(kStmtListRecur)
 
 // Statement -- single line
 NON_TERMINAL(kSimpleStmt)
@@ -173,7 +172,7 @@ NON_TERMINAL(kElseTail)
 
 NON_TERMINAL(kSwitchStmt)
 NON_TERMINAL(kSwitchHead)
-NON_TERMINAL(kCaseClauseRecur)
+NON_TERMINAL(kCaseRecur)
 
 NON_TERMINAL(kForStmt)
 NON_TERMINAL(kForHead)
@@ -297,7 +296,9 @@ static void EmptyFunction(void *grammar_data) {
 Grammar BuildGolikeGrammar() {
   GrammarBuilder builder;
 
-  builder.SetSymbolTable({
+  builder.SetSymbolTable(
+      {
+          // Terminal
           // special
           kStartSymbol, kEofSymbol, kSpaceSymbol, kLFSymbol, kEpsilonSymbol,
           // keywords
@@ -306,8 +307,8 @@ Grammar BuildGolikeGrammar() {
           // other
           kIdentifier, kIntLit, kFloatLit, kStringLit,
           // one-char  operator
-          kLeftBrace, kRightBrace, kLeftParen, kRightParen, kLeftSquare,
-          kRightSquare, kDot, kComma, kColon, kSemicolon, kAssign,
+          kLeftBrace, kRightBrace, kLeftParen, kRightParen,
+          kLeftSquare, kRightSquare, kDot, kComma, kColon, kSemicolon, kAssign,
           kAdd, kSub, kMul, kDiv, kMod,
           kBitAnd, kBitOr, kBitXor, kLogicalNegative, kLT, kGT,
           // multi-char operator
@@ -317,6 +318,7 @@ Grammar BuildGolikeGrammar() {
           kAddAssign, kSubAssign, kMulAssign, kDivAssign, kModAssign,
           kShortDecl,
 
+          // Non-Terminal
           // source
           kPackageClause, kImportDeclRecur, kTopDeclRecur,
           kIgnore,
@@ -326,14 +328,14 @@ Grammar BuildGolikeGrammar() {
           kDeclaration, kDeclAssign, kFunctionDecl,
           kSignature, kSignatureReturn, kParameterList, kParameterRecur,
           // statement
-          kBlock, kStatement, kStatementRecur,
+          kBlock, kStatement, kStmtRecur, kStmtList,
           // statement -- single line
-          kSimpleStmt, kLabeledStmt, kReturnStmt, kGotoStmt,
-          kEmptyStmt, kIncDecStmt, kAssignStmt, kShortVarDecl,
+          kReturnStmt, kGotoStmt, kIncDecStmt, kIncDecTail,
+          kAssignStmt, kShortVarDecl,
           // statement -- multi line
           kIfStmt, kIfHead, kIfHeadRight, kElseClause, kElseTail,
-          kSwitchStmt, kSwitchHead, kCaseClauseRecur,
-          kForStmt,kForHead, kForHeadRight,
+          kSwitchStmt, kSwitchHead, kCaseRecur,
+          kForStmt, kForHead, kForHeadRight,
           // expression
           kExpr, kExprRecur, kExprList, kExprListRecur, kExprListLess,
           kUnaryExpr, kPrimaryExpr, kPrimaryExprRecur, kOperand,
@@ -343,12 +345,7 @@ Grammar BuildGolikeGrammar() {
 
   builder.SetTokenFeeder(TokenFeeder);
 
-  // Source
-  builder.InsertRule(
-      kStartSymbol,
-      {kPackageClause, kIgnore, kImportDeclRecur, kTopDeclRecur},
-      EmptyFunction);
-
+  // End Line & Ignore
   builder.InsertRule(kEndLine, {kLFSymbol}, EmptyFunction);
   builder.InsertRule(kEndLine, {kSemicolon}, EmptyFunction);
 
@@ -357,22 +354,37 @@ Grammar BuildGolikeGrammar() {
   builder.InsertRule(kIgnore, {kEndLine, kIgnore},
                      EmptyFunction);
 
-  builder.InsertRule(kPackageClause, {kPackage, kIdentifier, kEndLine},
-                     EmptyFunction);
-
   // Type Name
   builder.InsertRule(kTypeName, {kIdentifier},
                      EmptyFunction);
   builder.InsertRule(kTypeName, {kFunc, kSignature},
                      EmptyFunction);
 
-  // Declaration
+  // Literal
+  builder.InsertRule(kLiteral, {kIntLit},
+                     EmptyFunction);
+  builder.InsertRule(kLiteral, {kFloatLit},
+                     EmptyFunction);
+  builder.InsertRule(kLiteral, {kStringLit},
+                     EmptyFunction);
+
+  // Source
+  builder.InsertRule(
+      kStartSymbol,
+      {kPackageClause, kIgnore, kImportDeclRecur, kTopDeclRecur},
+      EmptyFunction);
+  // Package
+  builder.InsertRule(kPackageClause, {kPackage, kIdentifier, kEndLine},
+                     EmptyFunction);
+
+  // Import
   builder.InsertRule(kImportDeclRecur, {kEpsilonSymbol},
                      EmptyFunction);
   builder.InsertRule(kImportDeclRecur,
                      {kImport, kStringLit, kEndLine, kIgnore, kImportDeclRecur},
                      EmptyFunction);
 
+  // Top Declaration
   builder.InsertRule(kTopDeclRecur, {kEpsilonSymbol},
                      EmptyFunction);
   builder.InsertRule(kTopDeclRecur, {kDeclaration, kIgnore, kTopDeclRecur},
@@ -380,6 +392,7 @@ Grammar BuildGolikeGrammar() {
   builder.InsertRule(kTopDeclRecur, {kFunctionDecl, kIgnore, kTopDeclRecur},
                      EmptyFunction);
 
+  // Top - Normal Declaration
   builder.InsertRule(kDeclaration,
                      {kVar, kIdentifier, kTypeName, kDeclAssign, kEndLine},
                      EmptyFunction);
@@ -388,6 +401,7 @@ Grammar BuildGolikeGrammar() {
   builder.InsertRule(kDeclAssign, {kAssign, kExprList},
                      EmptyFunction);
 
+  // Top - Function Declaration
   builder.InsertRule(kFunctionDecl, {kFunc, kIdentifier, kSignature, kBlock},
                      EmptyFunction);
   builder.InsertRule(
@@ -402,52 +416,39 @@ Grammar BuildGolikeGrammar() {
   builder.InsertRule(kParameterRecur,
                      {kComma, kIdentifier, kTypeName, kParameterRecur},
                      EmptyFunction);
-
   builder.InsertRule(kSignatureReturn, {kEpsilonSymbol},
                      EmptyFunction);
-
   builder.InsertRule(kSignatureReturn, {kTypeName},
                      EmptyFunction);
 
-  // Statement
-
-  builder.InsertRule(kBlock, {kLeftBrace, kStatementRecur, kRightBrace},
+  // Block
+  builder.InsertRule(kBlock, {kLeftBrace, kStmtRecur, kRightBrace},
                      EmptyFunction);
 
-  builder.InsertRule(kLiteral, {kIntLit},
+  // Statement List, >= 1
+  builder.InsertRule(kStmtList,
+                     {kIgnore, kStatement, kStmtRecur},
                      EmptyFunction);
-  builder.InsertRule(kLiteral, {kFloatLit},
-                     EmptyFunction);
-  builder.InsertRule(kLiteral, {kStringLit},
-                     EmptyFunction);
-
-  builder.InsertRule(kStmtList, {kStatement, kStmtListRecur}, EmptyFunction);
-  builder.InsertRule(kStmtListRecur, {kEpsilonSymbol}, EmptyFunction);
-  builder.InsertRule(kStmtListRecur,
-                     {kStatement, kStmtListRecur},
+  // Statement List, >= 0
+  builder.InsertRule(kStmtRecur, {kEpsilonSymbol}, EmptyFunction);
+  builder.InsertRule(kStmtRecur, {kEndLine, kStmtRecur}, EmptyFunction);
+  builder.InsertRule(kStmtRecur, {kStatement, kStmtRecur},
                      EmptyFunction);
 
-  builder.InsertRule(kStatementRecur, {kEpsilonSymbol}, EmptyFunction);
-  builder.InsertRule(kStatementRecur,
-                     {kStatement, kStatementRecur},
-                     EmptyFunction);
-
-  builder.InsertRule(kStatement, {kEndLine}, EmptyFunction);
-  builder.InsertRule(kStatement, {kSimpleStmt}, EmptyFunction);
+  // Statement -> Declaration
   builder.InsertRule(kStatement, {kDeclaration}, EmptyFunction);
-  builder.InsertRule(kStatement, {kReturnStmt}, EmptyFunction);
+  // Line statement
   builder.InsertRule(kStatement, {kBreak, kEndLine}, EmptyFunction);
   builder.InsertRule(kStatement, {kContinue, kEndLine}, EmptyFunction);
-  builder.InsertRule(kStatement, {kGotoStmt}, EmptyFunction);
+  builder.InsertRule(kStatement, {kGoto, kIdentifier, kEndLine}, EmptyFunction);
+  builder.InsertRule(kStatement, {kReturn, kExprListLess, kEndLine},
+                     EmptyFunction);
+  builder.InsertRule(kStatement, {kExpr, kEndLine}, EmptyFunction);
+  // Block statement
+  builder.InsertRule(kStatement, {kBlock}, EmptyFunction);
   builder.InsertRule(kStatement, {kIfStmt}, EmptyFunction);
   builder.InsertRule(kStatement, {kSwitchStmt}, EmptyFunction);
   builder.InsertRule(kStatement, {kForStmt}, EmptyFunction);
-
-  builder.InsertRule(kSimpleStmt, {kExpr, kEndLine}, EmptyFunction);
-  builder.InsertRule(kReturnStmt,
-                     {kReturn, kExprListLess, kEndLine},
-                     EmptyFunction);
-  builder.InsertRule(kGotoStmt, {kGoto, kIdentifier, kEndLine}, EmptyFunction);
 
   // If
   builder.InsertRule(kIfStmt, {kIf, kIfHead, kBlock, kElseClause},
@@ -464,16 +465,16 @@ Grammar BuildGolikeGrammar() {
 
   // Switch
   builder.InsertRule(kSwitchStmt, {kSwitch, kSwitchHead,
-                                   kLeftBrace, kIgnore, kCaseClauseRecur,
+                                   kLeftBrace, kIgnore, kCaseRecur,
                                    kRightBrace},
                      EmptyFunction);
   builder.InsertRule(kSwitchHead, {kEpsilonSymbol}, EmptyFunction);
   builder.InsertRule(kSwitchHead, {kIfHead}, EmptyFunction);
-  builder.InsertRule(kCaseClauseRecur, {kEpsilonSymbol}, EmptyFunction);
-  builder.InsertRule(kCaseClauseRecur,
-                     {kCase, kExprList, kColon, kStmtList, kCaseClauseRecur},
+  builder.InsertRule(kCaseRecur, {kEpsilonSymbol}, EmptyFunction);
+  builder.InsertRule(kCaseRecur,
+                     {kCase, kExprList, kColon, kStmtList, kCaseRecur},
                      EmptyFunction);
-  builder.InsertRule(kCaseClauseRecur,
+  builder.InsertRule(kCaseRecur,
                      {kDefault, kColon, kStmtList},
                      EmptyFunction);
 
@@ -482,18 +483,20 @@ Grammar BuildGolikeGrammar() {
   builder.InsertRule(kForHead, {kEpsilonSymbol}, EmptyFunction);
   builder.InsertRule(kForHead, {kExpr, kForHeadRight}, EmptyFunction);
   builder.InsertRule(kForHeadRight, {kEpsilonSymbol}, EmptyFunction);
-  // TODO
-  builder.InsertRule(kForHeadRight, {kSemicolon, kExpr, kSemicolon, kExpr}, EmptyFunction);
+  builder.InsertRule(kForHeadRight,
+                     {kSemicolon, kExpr, kSemicolon, kExpr},
+                     EmptyFunction);
 
-  // Expression
+  // Expression List & Recur
   builder.InsertRule(kExprListLess, {kEpsilonSymbol}, EmptyFunction);
   builder.InsertRule(kExprListLess, {kExprList}, EmptyFunction);
-  builder.InsertRule(kExpr, {kLiteral}, EmptyFunction);
   builder.InsertRule(kExprList, {kExpr, kExprListRecur}, EmptyFunction);
   builder.InsertRule(kExprListRecur, {kEpsilonSymbol}, EmptyFunction);
   builder.InsertRule(kExprListRecur,
                      {kComma, kExpr, kExprListRecur},
                      EmptyFunction);
+  // Expression
+  builder.InsertRule(kExpr, {kLiteral}, EmptyFunction);
 
   return builder.Build();
 }
