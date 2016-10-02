@@ -13,6 +13,7 @@
 #include "ll_parser.h"
 
 #include "expr_grammar.h"
+#include "golike_grammar.h"
 
 using namespace std;
 using namespace simple_logger;
@@ -90,7 +91,52 @@ void TEST_LLParser() {
   }
 }
 
-void TEST_AnsiC() {
+void TEST_Golike() {
+  using namespace golike_grammar;
+
+  Grammar grammar = BuildGolikeGrammar();
+
+  for (size_t i = 0; i < grammar.RuleNumber(); ++i) {
+    cout << "Rule " << i << " " << grammar.GetRule(i) << endl;
+  }
+
+  LLTable ll_table;
+  auto result = BuildLLTable(grammar, ll_table);
+  logger.log("Build LL(1) Table: {}", result);
+  if (!result) {
+    return;
+  }
+
+  LLParser ll_parser(grammar, ll_table);
+
+  Tokenizer tokenizer = BuildGolikeTokenizer();
+  string s{
+      "package hello\n"
+          "import \"hello\"\n"
+          "import \"world\"\n"
+          "var a_int int\n"
+          "var a_string string\n"
+          "func main() {\n"
+          "1234567\n"
+          "return 0\n"
+          "goto jump\n"
+          "if 123 {\n"
+          "} else {\n"
+          "}\n"
+          "}\n"
+          "var a_float32 float32\n"
+  };
+  vector<Token> tokens;
+
+  tokenizer.LexicalAnalyze(s, tokens);
+  for (auto &token : tokens) {
+    logger.debug("{}", to_string(token));
+  }
+
+  auto golike_data = CreateGolikeGrammarData();
+
+  result = ll_parser.Parse(golike_data.get(), tokens);
+  logger.log("Parse result {}", result);
 }
 
 int main() {
@@ -99,7 +145,8 @@ int main() {
   // Example();
   // TEST_Tokenizer();
   // TEST_ExprGrammar();
-  TEST_LLParser();
+  // TEST_LLParser();
+  TEST_Golike();
 
   return 0;
 }

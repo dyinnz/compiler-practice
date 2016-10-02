@@ -1,9 +1,7 @@
 package testcase
 
-import (
-	"simpleadd"
-	"simplesub"
-)
+import "simpleadd"
+import "simplesub"
 
 func TestImport() int {
 	sum := simpleadd.Add(1, 2)

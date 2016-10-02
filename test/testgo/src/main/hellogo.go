@@ -1,9 +1,7 @@
 package main
 
-import (
-	"fmt"
-	"testcase"
-)
+import "fmt"
+import "testcase"
 
 func main() {
 	fmt.Println("hello world")
@@ -12,6 +10,9 @@ func main() {
 	fmt.Println(testcase.String())
 	fmt.Println(testcase.Int())
 	fmt.Println(testcase.Float32())
+
+	// comment
+	fmt.Println(testcase.TestComment())
 
 	// for
 	fmt.Println(testcase.ThreeCases())

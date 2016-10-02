@@ -131,7 +131,9 @@ DFANode *DFAConverter::ConstructDFADiagram() {
     NumberSet curr_set = q.front();
     DFANode *dfa_curr = set_to_dfa_node_[curr_set];
 
+    /*
     logger.debug("current set {}", to_string(curr_set));
+     */
 
     NFAEdge::CharMasks chars = GetEdgeCharMasks(curr_set);
     for (char c = 0; c < CHAR_MAX; ++c) {
@@ -147,8 +149,10 @@ DFANode *DFAConverter::ConstructDFADiagram() {
         }
         DFANode *dfa_adjacent = iter->second;
 
+        /*
         logger.debug("char {}: adjacent set {}, node: {}", c,
                      to_string(adjacent_set), dfa_adjacent);
+                     */
 
         dfa_curr->AddEdge(c, dfa_adjacent);
       }
@@ -290,7 +294,7 @@ unordered_set<char> DFAOptimizer::GetSetEdgeChars(const NumberSet &s) {
 
 bool DFAOptimizer::PartSetByChar(list<NumberSet> &parted_sets,
                                  const NumberSet &curr_set, char c) {
-  logger.debug("part set: {} by {}", to_string(curr_set), c);
+  // logger.debug("part set: {} by {}", to_string(curr_set), c);
 
   unordered_map<NumberSet *, NumberSet> old_to_new;
   for (int u_num : curr_set) {
@@ -326,7 +330,7 @@ void DFAOptimizer::TryPartEachSet() {
   size_t last_size = 0;
   list<NumberSet> new_partition;
   do {
-    logger.debug("new loop");
+    // logger.debug("new loop");
 
     last_size = partition_.size();
     new_partition.clear();
@@ -335,7 +339,7 @@ void DFAOptimizer::TryPartEachSet() {
 
     for (NumberSet &curr_set : partition_) {
 
-      logger.debug("current set: {}", to_string(curr_set));
+      // logger.debug("current set: {}", to_string(curr_set));
 
       auto chars = GetSetEdgeChars(curr_set);
       bool is_parted = false;
@@ -358,10 +362,12 @@ void DFAOptimizer::TryPartEachSet() {
     std::swap(new_partition, partition_);
   } while (last_size < partition_.size());
 
+  /*
   logger.debug("end of partition");
   for (auto &s : partition_) {
     logger.debug("final parted set: {}", to_string(s));
   }
+   */
 }
 
 shared_ptr<DFA> DFAOptimizer::ConstructFromSets() {

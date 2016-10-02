@@ -54,7 +54,7 @@ class LLParser {
                        std::vector<Token>::iterator &token_iter);
 
   bool ProductNonTerminal(StackState &top_state,
-                          Token &&token);
+                          const Token &token);
 
  private:
   const Grammar &grammar_;

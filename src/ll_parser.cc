@@ -4,7 +4,6 @@
 
 #include "ll_parser.h"
 #include "simplelogger.h"
-#include "expr_grammar.h"
 
 using std::unordered_multimap;
 using std::unordered_map;
@@ -71,6 +70,9 @@ SymbolAuxSet CalcFirst(const Grammar &grammar) {
 
 SymbolAuxSet CalcFollow(const Grammar &grammar, const SymbolAuxSet &firsts) {
   SymbolAuxSet follows;
+  for (auto &symbol : grammar.symbol_table()) {
+    follows[symbol] = {};
+  }
 
   follows[kStartSymbol].insert(kEofSymbol);
 
@@ -125,6 +127,24 @@ SymbolAuxSet CalcFollow(const Grammar &grammar, const SymbolAuxSet &firsts) {
 ExtendFirst CalcExtendFirst(const Grammar &grammar,
                             const SymbolAuxSet &firsts,
                             const SymbolAuxSet &follows) {
+
+  logger.log("First:");
+  for (auto &p : firsts) {
+    logger.log("{}'s first set, size {}: ", p.first, p.second.size());
+    for (auto &s : p.second) {
+      logger.log("{}", s);
+    }
+    logger.log("");
+  }
+  logger.log("Follow:");
+  for (auto &p : follows) {
+    logger.log("{}'s follow set:", p.first);
+    for (auto &s : p.second) {
+      logger.log("{}", s);
+    }
+    logger.log("");
+  }
+
   ExtendFirst extend_first(grammar.RuleNumber());
 
   for (size_t i = 0; i < extend_first.size(); ++i) {
@@ -132,7 +152,7 @@ ExtendFirst CalcExtendFirst(const Grammar &grammar,
     auto &left = grammar.GetRule(i).left();
     auto &right = grammar.GetRule(i).right();
 
-    // fill the First+(A) with (First(B1) & First(B2) & ... First(Bi)),
+    // fill the First+(i) with (First(B1) & First(B2) & ... First(Bi)),
     // where Bi is the first one which epsilon does not belong to First(Bi)
     auto iter = right.begin();
     while (iter != right.end()) {
@@ -159,10 +179,22 @@ bool BuildLLTable(const Grammar &grammar,
                   const ExtendFirst &extend_firsts,
                   LLTable &ll_table) {
   for (size_t i = 0; i < extend_firsts.size(); ++i) {
+    std::cout << "[Extend of Rule " << i <<  ']' << std::endl;
+    for (auto &terminal : extend_firsts[i]) {
+      std::cout << terminal << " ";
+    }
+    std::cout << std::endl;
+  }
+
+  for (size_t i = 0; i < extend_firsts.size(); ++i) {
     auto &left = grammar.GetRule(i).left();
     auto &left_entry = ll_table[left];
     for (auto &terminal : extend_firsts[i]) {
       if (left_entry.end() != left_entry.find(terminal)) {
+        logger.error("LL(1) conflict on left {} terminal {},\n"
+                         "curr rule {}, new rule {}",
+                     left, terminal,
+                     left_entry.find(terminal)->second, i);
         return false;
       }
       left_entry.insert({terminal, i});
@@ -178,18 +210,21 @@ bool BuildLLTable(const Grammar &grammar, LLTable &ll_table) {
   return BuildLLTable(grammar, extend_firsts, ll_table);
 }
 
-bool LLParser::ProductNonTerminal(StackState &top_state, Token &&token) {
+bool LLParser::ProductNonTerminal(StackState &top_state, const Token &token) {
 
   auto jump_list_iter = ll_table_.find(top_state.symbol);
   if (ll_table_.end() == jump_list_iter) {
-    logger.error("wrong LL(1) SymbolTable: no such non-terminal symbol {}",
+    logger.error("wrong LL(1) Table: top symbol {}, no such symbol in table",
                  top_state.symbol);
     return false;
   }
 
   auto rule_index_iter = jump_list_iter->second.find(token.symbol);
   if (jump_list_iter->second.end() == rule_index_iter) {
-    logger.error("unexpected token {}", to_string(token));
+    logger.error(
+        "wrong LL(1) Table: top symbol {}, no such {} in jump list",
+        top_state.symbol,
+        to_string(token));
     return false;
   }
 
@@ -222,8 +257,7 @@ bool LLParser::ProductTerminal(void *grammar_data,
   } else {
     // mismatch
     logger.error("terminal mismatch: top state {}, candidate {}",
-                 expr_grammar::to_string(top_state.symbol),
-                 expr_grammar::to_string(token_iter->symbol));
+                 top_state.symbol, token_iter->symbol);
     return false;
   }
 }
@@ -239,11 +273,6 @@ bool LLParser::Parse(void *grammar_data, vector<Token> &tokens) {
   while (!production_stack_.empty() && token_iter != tokens.end()) {
     StackState &top_state = production_stack_.top();
 
-    /*
-    logger.debug("current top symbol: {}",
-                 expr_grammar::to_string(top_state.symbol));
-                 */
-
     if (top_state.is_handled) {
       //  pop
       grammar_.GetRule(top_state.rule_index).snippet()(grammar_data);
@@ -252,7 +281,7 @@ bool LLParser::Parse(void *grammar_data, vector<Token> &tokens) {
     } else {
       // product
       if (top_state.symbol.IsNonTerminal()) {
-        if (!ProductNonTerminal(top_state, move(*token_iter))) {
+        if (!ProductNonTerminal(top_state, *token_iter)) {
           result = false;
           break;
         }

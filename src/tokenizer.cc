@@ -96,7 +96,7 @@ Token Tokenizer::GetNextToken(const char *&p) {
   longest_token.column = p - curr_row_pos_;
   p = s;
 
-  logger.debug("{}(): {}", __func__, to_string(longest_token));
+  // logger.debug("{}(): {}", __func__, to_string(longest_token));
   return longest_token;
 }
 
@@ -138,6 +138,7 @@ bool Tokenizer::LexicalAnalyze(const char *beg,
     if (token.symbol == kLFSymbol) {
       curr_row_ += 1;
       curr_row_pos_ = curr_;
+      token.str = "\\n";
     }
     // skip ignored token
     if (ignore_set_.end() == ignore_set_.find(token.symbol)) {

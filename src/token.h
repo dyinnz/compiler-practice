@@ -31,8 +31,7 @@ static const Token kEofToken("kEofToken", kEofSymbol);
 
 inline std::string to_string(const Token &token) {
   std::ostringstream oss;
-  oss << "Token { T" << token.symbol.ID()
-      << ", P(" << token.row << ',' << token.column << "), "
-      << token.str << " }";
+  oss << "Token { " << token.symbol << ", P(" << token.row << ','
+      << token.column << "), " << token.str << " }";
   return oss.str();
 }

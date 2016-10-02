@@ -18,14 +18,26 @@ constexpr int kLFID = kStartID - 5;
 constexpr int name##ID = kStartID + (index); \
 extern const Symbol name;
 
-#define TERMINAL(name) const Symbol name(Symbol::kTerminal, name##ID);
-#define NON_TERMINAL(name) const Symbol name(Symbol::kNonTerminal, name##ID);
+#define DECLARE_CHAR_SYMBOL(name, index) \
+constexpr int name##ID = (index); \
+extern const Symbol name;
+
+#define TERMINAL(name) \
+const char *_##name() { return __func__; }\
+const Symbol name(Symbol::kTerminal, name##ID, _##name() + 2);
+
+#define NON_TERMINAL(name) \
+const char *_##name() { return __func__; }\
+const Symbol name(Symbol::kNonTerminal, name##ID, _##name() + 2);
 
 class Symbol {
  public:
   enum Type { kTerminal, kNonTerminal };
 
-  Symbol(Type type, int id) : type_(type), id_(id) {}
+  Symbol(Type type, int id, const char *str)
+      : type_(type), id_(id), str_(str) {}
+
+  Symbol(Type type, int id) : type_(type), id_(id){}
   Symbol() : type_(kTerminal), id_(kErrorID) {}
 
   bool IsTerminal() const {
@@ -44,6 +56,10 @@ class Symbol {
     return id_;
   }
 
+  const char *str() const {
+    return str_;
+  }
+
   bool operator<(const Symbol &rhs) const {
     return id_ < rhs.id_;
   }
@@ -59,6 +75,7 @@ class Symbol {
  private:
   Type type_;
   int id_;
+  const char *str_{"nullptr"};
 };
 
 namespace std {
@@ -72,17 +89,14 @@ struct hash<Symbol> {
 
 } // end of namespace std
 
-static const Symbol kStartSymbol{Symbol::kNonTerminal, kStartID};
-static const Symbol kErrorSymbol(Symbol::kTerminal, kErrorID);
-static const Symbol kEofSymbol(Symbol::kTerminal, kEofID);
-static const Symbol kEpsilonSymbol(Symbol::kTerminal, kEpsilonID);
-static const Symbol kSpaceSymbol(Symbol::kTerminal, kSpaceID);
-static const Symbol kLFSymbol(Symbol::kTerminal, kLFID);
+
+static const Symbol kStartSymbol(Symbol::kNonTerminal, kStartID, "Start");
+static const Symbol kErrorSymbol(Symbol::kTerminal, kErrorID, "Error");
+static const Symbol kEofSymbol(Symbol::kTerminal, kEofID, "EOF");
+static const Symbol kEpsilonSymbol(Symbol::kTerminal, kEpsilonID, "Epsilon");
+static const Symbol kSpaceSymbol(Symbol::kTerminal, kSpaceID, "Space");
+static const Symbol kLFSymbol(Symbol::kTerminal, kLFID, "LF");
 
 inline std::ostream &operator<<(std::ostream &os, const Symbol &symbol) {
-  if (symbol.IsTerminal()) {
-    return os << "[T:" << symbol.ID() << ']';
-  } else {
-    return os << "[NT:" << symbol.ID() << ']';
-  }
+  return os << symbol.str();
 }

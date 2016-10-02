@@ -45,6 +45,14 @@ class ProductionRule {
   SnippetCallback snippet_;
 };
 
+inline std::ostream &operator<<(std::ostream &os, const ProductionRule &rule) {
+  os << rule.left() << " ->";
+  for (auto &s : rule.right()) {
+    os << ' ' << s;
+  }
+  return os;
+}
+
 class Grammar {
  public:
   typedef std::vector<ProductionRule> RuleRecord;
