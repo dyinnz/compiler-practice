@@ -34,8 +34,18 @@ add_executable(test_ll_parser
         )
 
 add_executable(test_golike_tokenizer
-        test/test_golike_tokenizer.cc
+        test/test_golike_tokenize.cc
         src/finite_automaton.cc
         src/regex_parser.cc
         src/tokenizer.cc
         src/golike_grammar.cc)
+
+add_executable(test_golike_pase
+        test/test_golike_parse.cc
+        src/ll_parser.cc
+        src/expr_grammar.cc
+        src/finite_automaton.cc
+        src/regex_parser.cc
+        src/tokenizer.cc
+        src/golike_grammar.cc
+        )

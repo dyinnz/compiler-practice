@@ -32,7 +32,7 @@ static std::streampos GetFileLength(ifstream &fin) {
   return length;
 }
 
-char *ReadFileData(const string &path, size_t &size) {
+static char *ReadFileData(const string &path, size_t &size) {
   ifstream fin(path);
   if (!fin) {
     return nullptr;
@@ -56,7 +56,7 @@ size_t size = 0; \
 const char *name = ReadFileData(kTestPath + (relative_path), size); \
 ScopeGuard [&] { delete[] name; };
 
-void TestTokenizeFile(const string &path) {
+static void TestTokenizeFile(const string &path) {
   GET_FILE_DATA_SAFELY(data, size, path)
 
   REQUIRE(data);

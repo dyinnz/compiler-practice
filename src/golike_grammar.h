@@ -142,6 +142,8 @@ DECLARE_SYMBOL(kParameterRecur, 226)
 DECLARE_SYMBOL(kBlock, 240)
 DECLARE_SYMBOL(kStatement, 241)
 DECLARE_SYMBOL(kStatementRecur, 242)
+DECLARE_SYMBOL(kStmtList, 243)
+DECLARE_SYMBOL(kStmtListRecur, 244)
 
 // Statement -- single line
 DECLARE_SYMBOL(kSimpleStmt, 251)
@@ -167,6 +169,8 @@ DECLARE_SYMBOL(kSwitchHead, 291)
 DECLARE_SYMBOL(kCaseClauseRecur, 292)
 
 DECLARE_SYMBOL(kForStmt, 293)
+DECLARE_SYMBOL(kForHead, 294)
+DECLARE_SYMBOL(kForHeadRight, 295)
 
 // about Expression
 DECLARE_SYMBOL(kExpr, 300)

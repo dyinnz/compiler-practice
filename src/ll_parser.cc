@@ -130,19 +130,21 @@ ExtendFirst CalcExtendFirst(const Grammar &grammar,
 
   logger.log("First:");
   for (auto &p : firsts) {
+    if (p.second.empty()) continue;
     logger.log("{}'s first set, size {}: ", p.first, p.second.size());
     for (auto &s : p.second) {
-      logger.log("{}", s);
+      std::cout << s << " ";
     }
-    logger.log("");
+    std::cout << std::endl;
   }
   logger.log("Follow:");
   for (auto &p : follows) {
+    if (p.second.empty()) continue;
     logger.log("{}'s follow set:", p.first);
     for (auto &s : p.second) {
-      logger.log("{}", s);
+      std::cout << s << " ";
     }
-    logger.log("");
+    std::cout << std::endl;
   }
 
   ExtendFirst extend_first(grammar.RuleNumber());
@@ -192,9 +194,10 @@ bool BuildLLTable(const Grammar &grammar,
     for (auto &terminal : extend_firsts[i]) {
       if (left_entry.end() != left_entry.find(terminal)) {
         logger.error("LL(1) conflict on left {} terminal {},\n"
-                         "curr rule {}, new rule {}",
+                         "curr rule: {}\n new rule: {}",
                      left, terminal,
-                     left_entry.find(terminal)->second, i);
+                     grammar.GetRule(left_entry.find(terminal)->second),
+                     grammar.GetRule(i));
         return false;
       }
       left_entry.insert({terminal, i});
@@ -263,11 +266,15 @@ bool LLParser::ProductTerminal(void *grammar_data,
 }
 
 bool LLParser::Parse(void *grammar_data, vector<Token> &tokens) {
+
   tokens.push_back(kEofToken);
 
   bool result = true;
   auto token_iter = tokens.begin();
 
+  while (!production_stack_.empty()) {
+    production_stack_.pop();
+  }
   production_stack_.push({kStartSymbol, SIZE_MAX, false});
 
   while (!production_stack_.empty() && token_iter != tokens.end()) {

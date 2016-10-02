@@ -6,6 +6,8 @@
  ******************************************************************************/
 
 #include <iostream>
+#include <fstream>
+#include <cstring>
 #include "simplelogger.h"
 #include "finite_automaton.h"
 #include "regex_parser.h"
@@ -91,14 +93,37 @@ void TEST_LLParser() {
   }
 }
 
+static std::streampos GetFileLength(ifstream &fin) {
+  auto backup = fin.tellg();
+  fin.seekg(0, fin.end);
+  auto length = fin.tellg();
+  fin.seekg(backup, fin.beg);
+  return length;
+}
+
+static char *ReadFileData(const string &path, size_t &size) {
+  ifstream fin(path);
+  if (!fin) {
+    return nullptr;
+  }
+
+  size = static_cast<size_t>(GetFileLength(fin));
+  auto data = new char[size + 1];
+  memset(data, 0, sizeof(char) * (size + 1));
+
+  if (fin.read(data, size)) {
+    return data;
+
+  } else {
+    delete data;
+    return nullptr;
+  }
+}
+
 void TEST_Golike() {
   using namespace golike_grammar;
 
   Grammar grammar = BuildGolikeGrammar();
-
-  for (size_t i = 0; i < grammar.RuleNumber(); ++i) {
-    cout << "Rule " << i << " " << grammar.GetRule(i) << endl;
-  }
 
   LLTable ll_table;
   auto result = BuildLLTable(grammar, ll_table);
@@ -110,22 +135,10 @@ void TEST_Golike() {
   LLParser ll_parser(grammar, ll_table);
 
   Tokenizer tokenizer = BuildGolikeTokenizer();
-  string s{
-      "package hello\n"
-          "import \"hello\"\n"
-          "import \"world\"\n"
-          "var a_int int\n"
-          "var a_string string\n"
-          "func main() {\n"
-          "1234567\n"
-          "return 0\n"
-          "goto jump\n"
-          "if 123 {\n"
-          "} else {\n"
-          "}\n"
-          "}\n"
-          "var a_float32 float32\n"
-  };
+  size_t size = 0;
+  auto p = ReadFileData("test-main.go", size);
+
+  string s(p);
   vector<Token> tokens;
 
   tokenizer.LexicalAnalyze(s, tokens);
@@ -141,6 +154,13 @@ void TEST_Golike() {
 
 int main() {
   logger.set_log_level(kDebug);
+
+  logger.log("sizeof Symbol::Type : {}", sizeof(Symbol::Type));
+  logger.log("sizeof Symbol : {}", sizeof(Symbol));
+  logger.log("sizeof string : {}", sizeof(string));
+  logger.log("sizeof Token : {}", sizeof(Token));
+  logger.log("sizeof size_t : {}", sizeof(size_t));
+  logger.log("sizeof int : {}", sizeof(int));
 
   // Example();
   // TEST_Tokenizer();

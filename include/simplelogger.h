@@ -40,8 +40,10 @@ inline void parse_format(std::ostringstream &ss, const char *format) {
 }
 
 template<typename T, typename ...A>
-void
-parse_format(std::ostringstream &ss, const char *format, const T &v, A... args);
+void parse_format(std::ostringstream &ss,
+                  const char *format,
+                  const T &v,
+                  A &&... args);
 
 
 /*----------------------------------------------------------------------------*/
@@ -72,30 +74,30 @@ class BaseLogger {
   }
 
   template<typename ...A>
-  void debug(A... args) {
+  void debug(A &&... args) {
 #ifdef DEBUG
-    print_wrapper(kDebug, args...);
+    print_wrapper(kDebug, std::forward<A>(args)...);
 #endif
   }
 
   template<typename ...A>
-  void log(A... args) {
-    print_wrapper(kLog, args...);
+  void log(A &&... args) {
+    print_wrapper(kLog, std::forward<A>(args)...);
   }
 
   template<typename ...A>
-  void notice(A... args) {
-    print_wrapper(kNotice, args...);
+  void notice(A &&... args) {
+    print_wrapper(kNotice, std::forward<A>(args)...);
   }
 
   template<typename ...A>
-  void error(A... args) {
-    print_wrapper(kError, args...);
+  void error(A &&... args) {
+    print_wrapper(kError, std::forward<A>(args)...);
   }
 
  private:
   template<typename ...A>
-  void print_wrapper(Level level, A... args);
+  void print_wrapper(Level level, A &&... args);
 
   Level _log_level{kError};
   FILE *_fp[kMaxLevel];
@@ -136,7 +138,7 @@ template<typename T, typename ...A>
 void parse_format(std::ostringstream &ss,
                   const char *format,
                   const T &v,
-                  A...              args) {
+                  A &&...              args) {
 
   assert(format);
   const char *p{format};
@@ -147,7 +149,7 @@ void parse_format(std::ostringstream &ss,
       case '{':
         if ('}' == *(p + 1)) {
           ss << v;
-          parse_format(ss, p + 2, args...);
+          parse_format(ss, p + 2, std::forward<A>(args)...);
           return;
 
         } else {
@@ -175,12 +177,12 @@ void parse_format(std::ostringstream &ss,
 
 
 template<typename ...A>
-void BaseLogger::print_wrapper(Level level, A... args) {
+void BaseLogger::print_wrapper(Level level, A &&... args) {
 
   if (log_level() <= level) {
     std::ostringstream ss;
     ss << kTag[level];
-    parse_format(ss, args...);
+    parse_format(ss, std::forward<A>(args)...);
     ss << "\n";
     fwrite(ss.str().c_str(), 1, ss.str().size(), _fp[level]);
   }

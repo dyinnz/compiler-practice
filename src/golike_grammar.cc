@@ -149,6 +149,8 @@ NON_TERMINAL(kParameterRecur)
 NON_TERMINAL(kBlock)
 NON_TERMINAL(kStatement)
 NON_TERMINAL(kStatementRecur)
+NON_TERMINAL(kStmtList)
+NON_TERMINAL(kStmtListRecur)
 
 // Statement -- single line
 NON_TERMINAL(kSimpleStmt)
@@ -174,6 +176,8 @@ NON_TERMINAL(kSwitchHead)
 NON_TERMINAL(kCaseClauseRecur)
 
 NON_TERMINAL(kForStmt)
+NON_TERMINAL(kForHead)
+NON_TERMINAL(kForHeadRight)
 
 // about Expression
 NON_TERMINAL(kExpr)
@@ -293,8 +297,7 @@ static void EmptyFunction(void *grammar_data) {
 Grammar BuildGolikeGrammar() {
   GrammarBuilder builder;
 
-  builder.SetSymbolTable(
-      {
+  builder.SetSymbolTable({
           // special
           kStartSymbol, kEofSymbol, kSpaceSymbol, kLFSymbol, kEpsilonSymbol,
           // keywords
@@ -329,7 +332,8 @@ Grammar BuildGolikeGrammar() {
           kEmptyStmt, kIncDecStmt, kAssignStmt, kShortVarDecl,
           // statement -- multi line
           kIfStmt, kIfHead, kIfHeadRight, kElseClause, kElseTail,
-          kSwitchStmt, kSwitchHead, kCaseClauseRecur, kForStmt,
+          kSwitchStmt, kSwitchHead, kCaseClauseRecur,
+          kForStmt,kForHead, kForHeadRight,
           // expression
           kExpr, kExprRecur, kExprList, kExprListRecur, kExprListLess,
           kUnaryExpr, kPrimaryExpr, kPrimaryExprRecur, kOperand,
@@ -417,17 +421,27 @@ Grammar BuildGolikeGrammar() {
   builder.InsertRule(kLiteral, {kStringLit},
                      EmptyFunction);
 
+  builder.InsertRule(kStmtList, {kStatement, kStmtListRecur}, EmptyFunction);
+  builder.InsertRule(kStmtListRecur, {kEpsilonSymbol}, EmptyFunction);
+  builder.InsertRule(kStmtListRecur,
+                     {kStatement, kStmtListRecur},
+                     EmptyFunction);
+
   builder.InsertRule(kStatementRecur, {kEpsilonSymbol}, EmptyFunction);
   builder.InsertRule(kStatementRecur,
                      {kStatement, kStatementRecur},
                      EmptyFunction);
+
   builder.InsertRule(kStatement, {kEndLine}, EmptyFunction);
   builder.InsertRule(kStatement, {kSimpleStmt}, EmptyFunction);
+  builder.InsertRule(kStatement, {kDeclaration}, EmptyFunction);
   builder.InsertRule(kStatement, {kReturnStmt}, EmptyFunction);
   builder.InsertRule(kStatement, {kBreak, kEndLine}, EmptyFunction);
   builder.InsertRule(kStatement, {kContinue, kEndLine}, EmptyFunction);
   builder.InsertRule(kStatement, {kGotoStmt}, EmptyFunction);
   builder.InsertRule(kStatement, {kIfStmt}, EmptyFunction);
+  builder.InsertRule(kStatement, {kSwitchStmt}, EmptyFunction);
+  builder.InsertRule(kStatement, {kForStmt}, EmptyFunction);
 
   builder.InsertRule(kSimpleStmt, {kExpr, kEndLine}, EmptyFunction);
   builder.InsertRule(kReturnStmt,
@@ -435,18 +449,41 @@ Grammar BuildGolikeGrammar() {
                      EmptyFunction);
   builder.InsertRule(kGotoStmt, {kGoto, kIdentifier, kEndLine}, EmptyFunction);
 
+  // If
   builder.InsertRule(kIfStmt, {kIf, kIfHead, kBlock, kElseClause},
                      EmptyFunction);
 
-  // TODO
   builder.InsertRule(kIfHead, {kExpr, kIfHeadRight}, EmptyFunction);
   builder.InsertRule(kIfHeadRight, {kEpsilonSymbol}, EmptyFunction);
-  builder.InsertRule(kIfHeadRight, {kComma, kExpr}, EmptyFunction);
+  builder.InsertRule(kIfHeadRight, {kSemicolon, kExpr}, EmptyFunction);
 
   builder.InsertRule(kElseClause, {kEpsilonSymbol}, EmptyFunction);
   builder.InsertRule(kElseClause, {kElse, kElseTail}, EmptyFunction);
   builder.InsertRule(kElseTail, {kBlock}, EmptyFunction);
   builder.InsertRule(kElseTail, {kIfStmt}, EmptyFunction);
+
+  // Switch
+  builder.InsertRule(kSwitchStmt, {kSwitch, kSwitchHead,
+                                   kLeftBrace, kIgnore, kCaseClauseRecur,
+                                   kRightBrace},
+                     EmptyFunction);
+  builder.InsertRule(kSwitchHead, {kEpsilonSymbol}, EmptyFunction);
+  builder.InsertRule(kSwitchHead, {kIfHead}, EmptyFunction);
+  builder.InsertRule(kCaseClauseRecur, {kEpsilonSymbol}, EmptyFunction);
+  builder.InsertRule(kCaseClauseRecur,
+                     {kCase, kExprList, kColon, kStmtList, kCaseClauseRecur},
+                     EmptyFunction);
+  builder.InsertRule(kCaseClauseRecur,
+                     {kDefault, kColon, kStmtList},
+                     EmptyFunction);
+
+  // For
+  builder.InsertRule(kForStmt, {kFor, kForHead, kBlock}, EmptyFunction);
+  builder.InsertRule(kForHead, {kEpsilonSymbol}, EmptyFunction);
+  builder.InsertRule(kForHead, {kExpr, kForHeadRight}, EmptyFunction);
+  builder.InsertRule(kForHeadRight, {kEpsilonSymbol}, EmptyFunction);
+  // TODO
+  builder.InsertRule(kForHeadRight, {kSemicolon, kExpr, kSemicolon, kExpr}, EmptyFunction);
 
   // Expression
   builder.InsertRule(kExprListLess, {kEpsilonSymbol}, EmptyFunction);
