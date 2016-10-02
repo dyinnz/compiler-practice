@@ -79,7 +79,7 @@ DECLARE_CHAR_SYMBOL(kMod, '%')
 DECLARE_CHAR_SYMBOL(kBitAnd, '&')
 DECLARE_CHAR_SYMBOL(kBitOr, '|')
 DECLARE_CHAR_SYMBOL(kBitXor, '^')
-DECLARE_CHAR_SYMBOL(kLogicalNegative, '!')
+DECLARE_CHAR_SYMBOL(kLogicalNeg, '!')
 
 DECLARE_CHAR_SYMBOL(kLT, '<')
 DECLARE_CHAR_SYMBOL(kGT, '>')
@@ -87,6 +87,8 @@ DECLARE_CHAR_SYMBOL(kGT, '>')
 /**
  * multi-char operator
  */
+DECLARE_SYMBOL(kBitClear, 60) // &^
+
 DECLARE_SYMBOL(kLeftShift, 61)  // <<
 DECLARE_SYMBOL(kRightShift, 62)  // >>
 DECLARE_SYMBOL(kInc, 63) // ++
@@ -173,6 +175,9 @@ DECLARE_SYMBOL(kExprList, 302)
 DECLARE_SYMBOL(kExprListRecur, 303)
 DECLARE_SYMBOL(kExprListLess, 304)
 
+DECLARE_SYMBOL(kComplexExpr, 305)
+DECLARE_SYMBOL(kRestExpr, 306)
+
 DECLARE_SYMBOL(kUnaryExpr, 310)
 DECLARE_SYMBOL(kPrimaryExpr, 311)
 DECLARE_SYMBOL(kPrimaryExprRecur, 312)
@@ -181,6 +186,7 @@ DECLARE_SYMBOL(kOperand, 313)
 // common operator
 DECLARE_SYMBOL(kUnaryOp, 320)
 DECLARE_SYMBOL(kBinaryOp, 321)
+DECLARE_SYMBOL(kCommonAssign, 322)
 
 // EndLine
 DECLARE_SYMBOL(kEndLine, 45)

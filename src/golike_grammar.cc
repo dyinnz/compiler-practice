@@ -84,7 +84,7 @@ TERMINAL(kMod)
 TERMINAL(kBitAnd)
 TERMINAL(kBitOr)
 TERMINAL(kBitXor)
-TERMINAL(kLogicalNegative)
+TERMINAL(kLogicalNeg)
 
 TERMINAL(kLT)
 TERMINAL(kGT)
@@ -98,6 +98,7 @@ TERMINAL(kInc) // ++
 TERMINAL(kDec) // --
 TERMINAL(kLogicalAnd) // &&
 TERMINAL(kLogicalOr) // ||
+TERMINAL(kBitClear) // &^
 
 TERMINAL(kLE) // <=
 TERMINAL(kGE) // >=
@@ -152,12 +153,9 @@ NON_TERMINAL(kStmtRecur)
 NON_TERMINAL(kStmtList)
 
 // Statement -- single line
-NON_TERMINAL(kSimpleStmt)
-NON_TERMINAL(kLabeledStmt)
 NON_TERMINAL(kReturnStmt)
 NON_TERMINAL(kGotoStmt)
 
-NON_TERMINAL(kEmptyStmt)
 NON_TERMINAL(kIncDecStmt)
 NON_TERMINAL(kIncDecTail)
 NON_TERMINAL(kAssignStmt)
@@ -185,6 +183,9 @@ NON_TERMINAL(kExprList)
 NON_TERMINAL(kExprListRecur)
 NON_TERMINAL(kExprListLess)
 
+NON_TERMINAL(kComplexExpr)
+NON_TERMINAL(kRestExpr)
+
 NON_TERMINAL(kUnaryExpr)
 NON_TERMINAL(kPrimaryExpr)
 NON_TERMINAL(kPrimaryExprRecur)
@@ -193,6 +194,7 @@ NON_TERMINAL(kOperand)
 // common operator
 NON_TERMINAL(kUnaryOp)
 NON_TERMINAL(kBinaryOp)
+NON_TERMINAL(kCommonAssign)
 
 /*----------------------------------------------------------------------------*/
 
@@ -231,6 +233,7 @@ Tokenizer BuildGolikeTokenizer() {
               {"--", kDec},
               {"&&", kLogicalAnd},
               {R"(\|\|)", kLogicalOr},
+              {"&^", kBitClear},
               {"<=", kLE},
               {">=", kGE},
               {"==", kEQ},
@@ -245,6 +248,7 @@ Tokenizer BuildGolikeTokenizer() {
               {"^=", kXorAssign},
               {"&=", kAndAssign},
               {R"(\|=)", kOrAssign},
+              {":=", kShortDecl},
               // words
               {R"(\d+)", kIntLit},
               {R"(\d+\.\d*|\.\d+)", kFloatLit},
@@ -270,7 +274,7 @@ Tokenizer BuildGolikeTokenizer() {
               {"&", kBitAnd},
               {R"(\|)", kBitOr},
               {"^", kBitOr},
-              {"!", kLogicalNegative},
+              {"!", kLogicalNeg},
               {"<", kLT},
               {">", kGT},
           });
@@ -310,10 +314,10 @@ Grammar BuildGolikeGrammar() {
           kLeftBrace, kRightBrace, kLeftParen, kRightParen,
           kLeftSquare, kRightSquare, kDot, kComma, kColon, kSemicolon, kAssign,
           kAdd, kSub, kMul, kDiv, kMod,
-          kBitAnd, kBitOr, kBitXor, kLogicalNegative, kLT, kGT,
+          kBitAnd, kBitOr, kLogicalNeg, kLT, kGT,
           // multi-char operator
-          kLeftShift, kRightShift, kInc, kDec, kLogicalAnd, kLogicalOr,
-          kLE, kGE, kEQ, kNE,
+          kLeftShift, kRightShift, kInc, kDec,
+          kLogicalAnd, kLogicalOr, kBitClear, kLE, kGE, kEQ, kNE,
           kLeftAssign, kRightAssign, kXorAssign, kAndAssign, kOrAssign,
           kAddAssign, kSubAssign, kMulAssign, kDivAssign, kModAssign,
           kShortDecl,
@@ -398,7 +402,7 @@ Grammar BuildGolikeGrammar() {
                      EmptyFunction);
   builder.InsertRule(kDeclAssign, {kEpsilonSymbol},
                      EmptyFunction);
-  builder.InsertRule(kDeclAssign, {kAssign, kExprList},
+  builder.InsertRule(kDeclAssign, {kCommonAssign, kExprList},
                      EmptyFunction);
 
   // Top - Function Declaration
@@ -443,7 +447,7 @@ Grammar BuildGolikeGrammar() {
   builder.InsertRule(kStatement, {kGoto, kIdentifier, kEndLine}, EmptyFunction);
   builder.InsertRule(kStatement, {kReturn, kExprListLess, kEndLine},
                      EmptyFunction);
-  builder.InsertRule(kStatement, {kExpr, kEndLine}, EmptyFunction);
+  builder.InsertRule(kStatement, {kComplexExpr, kEndLine}, EmptyFunction);
   // Block statement
   builder.InsertRule(kStatement, {kBlock}, EmptyFunction);
   builder.InsertRule(kStatement, {kIfStmt}, EmptyFunction);
@@ -454,7 +458,7 @@ Grammar BuildGolikeGrammar() {
   builder.InsertRule(kIfStmt, {kIf, kIfHead, kBlock, kElseClause},
                      EmptyFunction);
 
-  builder.InsertRule(kIfHead, {kExpr, kIfHeadRight}, EmptyFunction);
+  builder.InsertRule(kIfHead, {kComplexExpr, kIfHeadRight}, EmptyFunction);
   builder.InsertRule(kIfHeadRight, {kEpsilonSymbol}, EmptyFunction);
   builder.InsertRule(kIfHeadRight, {kSemicolon, kExpr}, EmptyFunction);
 
@@ -481,10 +485,10 @@ Grammar BuildGolikeGrammar() {
   // For
   builder.InsertRule(kForStmt, {kFor, kForHead, kBlock}, EmptyFunction);
   builder.InsertRule(kForHead, {kEpsilonSymbol}, EmptyFunction);
-  builder.InsertRule(kForHead, {kExpr, kForHeadRight}, EmptyFunction);
+  builder.InsertRule(kForHead, {kComplexExpr, kForHeadRight}, EmptyFunction);
   builder.InsertRule(kForHeadRight, {kEpsilonSymbol}, EmptyFunction);
   builder.InsertRule(kForHeadRight,
-                     {kSemicolon, kExpr, kSemicolon, kExpr},
+                     {kSemicolon, kExpr, kSemicolon, kComplexExpr},
                      EmptyFunction);
 
   // Expression List & Recur
@@ -495,8 +499,83 @@ Grammar BuildGolikeGrammar() {
   builder.InsertRule(kExprListRecur,
                      {kComma, kExpr, kExprListRecur},
                      EmptyFunction);
+
+  // Expression - operator
+  builder.InsertRule(kUnaryOp, {kAdd}, EmptyFunction); // +
+  builder.InsertRule(kUnaryOp, {kSub}, EmptyFunction); // -
+  builder.InsertRule(kUnaryOp, {kBitXor}, EmptyFunction); // ^
+  builder.InsertRule(kUnaryOp, {kLogicalNeg}, EmptyFunction); // !
+  builder.InsertRule(kUnaryOp, {kBitClear}, EmptyFunction); // #^
+
+  builder.InsertRule(kBinaryOp, {kAdd}, EmptyFunction);
+  builder.InsertRule(kBinaryOp, {kSub}, EmptyFunction);
+  builder.InsertRule(kBinaryOp, {kMul}, EmptyFunction);
+  builder.InsertRule(kBinaryOp, {kDiv}, EmptyFunction);
+  builder.InsertRule(kBinaryOp, {kMod}, EmptyFunction);
+
+  builder.InsertRule(kBinaryOp, {kBitAnd}, EmptyFunction); // &
+  builder.InsertRule(kBinaryOp, {kBitOr}, EmptyFunction); // |
+  builder.InsertRule(kBinaryOp, {kBitXor}, EmptyFunction); // ^
+
+  builder.InsertRule(kBinaryOp, {kLT}, EmptyFunction);
+  builder.InsertRule(kBinaryOp, {kGT}, EmptyFunction);
+
+  builder.InsertRule(kBinaryOp, {kLeftShift}, EmptyFunction);
+  builder.InsertRule(kBinaryOp, {kRightShift}, EmptyFunction);
+  builder.InsertRule(kBinaryOp, {kLogicalAnd}, EmptyFunction); // &&
+  builder.InsertRule(kBinaryOp, {kLogicalOr}, EmptyFunction); // ||
+
+  builder.InsertRule(kBinaryOp, {kLE}, EmptyFunction);
+  builder.InsertRule(kBinaryOp, {kGE}, EmptyFunction);
+  builder.InsertRule(kBinaryOp, {kEQ}, EmptyFunction);
+  builder.InsertRule(kBinaryOp, {kNE}, EmptyFunction);
+
+  builder.InsertRule(kCommonAssign, {kAssign}, EmptyFunction);
+  builder.InsertRule(kCommonAssign, {kLeftAssign}, EmptyFunction);
+  builder.InsertRule(kCommonAssign, {kRightAssign}, EmptyFunction);
+  builder.InsertRule(kCommonAssign, {kXorAssign}, EmptyFunction);
+  builder.InsertRule(kCommonAssign, {kAndAssign}, EmptyFunction);
+  builder.InsertRule(kCommonAssign, {kOrAssign}, EmptyFunction);
+  builder.InsertRule(kCommonAssign, {kAddAssign}, EmptyFunction);
+  builder.InsertRule(kCommonAssign, {kSubAssign}, EmptyFunction);
+  builder.InsertRule(kCommonAssign, {kDivAssign}, EmptyFunction);
+  builder.InsertRule(kCommonAssign, {kMulAssign}, EmptyFunction);
+  builder.InsertRule(kCommonAssign, {kModAssign}, EmptyFunction);
+
   // Expression
-  builder.InsertRule(kExpr, {kLiteral}, EmptyFunction);
+  builder.InsertRule(kUnaryExpr, {kPrimaryExpr}, EmptyFunction);
+  builder.InsertRule(kUnaryExpr, {kUnaryOp, kPrimaryExpr}, EmptyFunction);
+
+  builder.InsertRule(kExpr, {kUnaryExpr, kExprRecur}, EmptyFunction);
+  builder.InsertRule(kExprRecur, {kEpsilonSymbol}, EmptyFunction);
+  builder.InsertRule(kExprRecur, {kBinaryOp, kUnaryExpr, kExprRecur},
+                     EmptyFunction);
+
+  // Complex Expression
+  builder.InsertRule(kComplexExpr, {kExpr, kRestExpr}, EmptyFunction);
+  builder.InsertRule(kRestExpr, {kEpsilonSymbol}, EmptyFunction);
+  builder.InsertRule(kRestExpr, {kColon}, EmptyFunction);
+  builder.InsertRule(kRestExpr, {kCommonAssign, kExprList}, EmptyFunction);
+  builder.InsertRule(kRestExpr, {kShortDecl, kExprList}, EmptyFunction);
+  builder.InsertRule(kRestExpr, {kInc}, EmptyFunction);
+  builder.InsertRule(kRestExpr, {kDec}, EmptyFunction);
+
+  // Primary Expression
+  builder.InsertRule(kOperand, {kIdentifier}, EmptyFunction);
+  builder.InsertRule(kOperand, {kLiteral}, EmptyFunction);
+
+  builder.InsertRule(kPrimaryExpr,
+                     {kOperand, kPrimaryExprRecur},
+                     EmptyFunction);
+  builder.InsertRule(kPrimaryExprRecur, {kEpsilonSymbol}, EmptyFunction);
+  builder.InsertRule(kPrimaryExprRecur, {kDot, kPrimaryExpr},
+                     EmptyFunction);
+  builder.InsertRule(kPrimaryExprRecur,
+                     {kLeftSquare, kExpr, kRightSquare, kPrimaryExprRecur},
+                     EmptyFunction);
+  builder.InsertRule(kPrimaryExprRecur,
+                     {kLeftParen, kExprListLess, kRightParen, kPrimaryExprRecur},
+                     EmptyFunction);
 
   return builder.Build();
 }

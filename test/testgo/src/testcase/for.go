@@ -10,7 +10,7 @@ func ThreeCases() int {
 
 func JustMiddle() int {
 	sum := 1
-	for ; sum < 1000; {
+	for sum < 1000 {
 		sum *= 2
 	}
 	return sum

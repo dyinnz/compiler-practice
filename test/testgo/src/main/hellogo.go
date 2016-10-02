@@ -21,7 +21,7 @@ func main() {
 	fmt.Println(testcase.DeadLoop())
 
 	// func
-	fmt.Println(testcase.Swap(1, 2))
+	fmt.Println(testcase.Second(1, 2))
 	fmt.Println(testcase.ReturnSwap()(1, 2))
 
 	// if

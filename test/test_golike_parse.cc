@@ -107,3 +107,93 @@ TEST_CASE("Parsing for comment") {
   auto result = ll_parser.Parse(parse_data.get(), tokens);
   REQUIRE(result);
 }
+
+TEST_CASE("Parsing for for") {
+  logger.set_log_level(kDebug);
+  auto tokens = GetTokensFromFile("testcase/for.go");
+  auto ll_parser = GetLLParser();
+  auto parse_data = CreateGolikeGrammarData();
+
+  auto result = ll_parser.Parse(parse_data.get(), tokens);
+  REQUIRE(result);
+}
+
+TEST_CASE("Parsing for func") {
+  logger.set_log_level(kDebug);
+  auto tokens = GetTokensFromFile("testcase/func.go");
+  auto ll_parser = GetLLParser();
+  auto parse_data = CreateGolikeGrammarData();
+
+  auto result = ll_parser.Parse(parse_data.get(), tokens);
+  REQUIRE(result);
+}
+
+TEST_CASE("Parsing for if") {
+  logger.set_log_level(kDebug);
+  auto tokens = GetTokensFromFile("testcase/if.go");
+  auto ll_parser = GetLLParser();
+  auto parse_data = CreateGolikeGrammarData();
+
+  auto result = ll_parser.Parse(parse_data.get(), tokens);
+  REQUIRE(result);
+}
+
+TEST_CASE("Parsing for import") {
+  logger.set_log_level(kDebug);
+  auto tokens = GetTokensFromFile("testcase/import.go");
+  auto ll_parser = GetLLParser();
+  auto parse_data = CreateGolikeGrammarData();
+
+  auto result = ll_parser.Parse(parse_data.get(), tokens);
+  REQUIRE(result);
+}
+
+TEST_CASE("Parsing for switch") {
+  logger.set_log_level(kDebug);
+  auto tokens = GetTokensFromFile("testcase/switch.go");
+  auto ll_parser = GetLLParser();
+  auto parse_data = CreateGolikeGrammarData();
+
+  auto result = ll_parser.Parse(parse_data.get(), tokens);
+  REQUIRE(result);
+}
+
+TEST_CASE("Parsing for var") {
+  logger.set_log_level(kDebug);
+  auto tokens = GetTokensFromFile("testcase/var.go");
+  auto ll_parser = GetLLParser();
+  auto parse_data = CreateGolikeGrammarData();
+
+  auto result = ll_parser.Parse(parse_data.get(), tokens);
+  REQUIRE(result);
+}
+
+TEST_CASE("Parsing for add") {
+  logger.set_log_level(kDebug);
+  auto tokens = GetTokensFromFile("simpleadd/add.go");
+  auto ll_parser = GetLLParser();
+  auto parse_data = CreateGolikeGrammarData();
+
+  auto result = ll_parser.Parse(parse_data.get(), tokens);
+  REQUIRE(result);
+}
+
+TEST_CASE("Parsing for sub") {
+  logger.set_log_level(kDebug);
+  auto tokens = GetTokensFromFile("simplesub/sub.go");
+  auto ll_parser = GetLLParser();
+  auto parse_data = CreateGolikeGrammarData();
+
+  auto result = ll_parser.Parse(parse_data.get(), tokens);
+  REQUIRE(result);
+}
+
+TEST_CASE("Parsing for main") {
+  logger.set_log_level(kDebug);
+  auto tokens = GetTokensFromFile("main/hellogo.go");
+  auto ll_parser = GetLLParser();
+  auto parse_data = CreateGolikeGrammarData();
+
+  auto result = ll_parser.Parse(parse_data.get(), tokens);
+  REQUIRE(result);
+}

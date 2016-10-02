@@ -1,9 +1,9 @@
 package testcase
 
-func Swap(x int, y int) (int, int) {
-	return y, x
+func Second(x int, y int) int {
+	return y
 }
 
-func ReturnSwap() func(int, int) (int, int) {
-	return Swap;
+func ReturnSwap() func(x int, y int) int {
+	return Second;
 }
