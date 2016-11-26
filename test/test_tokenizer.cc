@@ -61,7 +61,7 @@ TEST_CASE("Lexical analyse") {
   REQUIRE(tokens[0].str == "if");
   REQUIRE(tokens[1].str == "there");
   REQUIRE(tokens[2].str == "are");
-  REQUIRE(tokens[3].str == "\n");
+  REQUIRE(tokens[3].str == "\\n");
   REQUIRE(tokens[4].str == "1000");
   REQUIRE(tokens[5].str == "dogs");
 
