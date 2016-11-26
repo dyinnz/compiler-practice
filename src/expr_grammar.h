@@ -11,28 +11,20 @@
 
 namespace expr_grammar {
 
-constexpr int kExprID = kStartID + 1;
-constexpr int kExprRecurID = kStartID + 2;
-constexpr int kTermID = kStartID + 3;
-constexpr int kTermRecurID = kStartID + 4;
-constexpr int kFactorID = kStartID + 5;
-constexpr int kNumberID = kStartID + 6;
-constexpr int kNameID = kStartID + 7;
+DECLARE_SYMBOL(kExpr, 11)
+DECLARE_SYMBOL(kExprRecur, 12)
+DECLARE_SYMBOL(kTerm, 21)
+DECLARE_SYMBOL(kTermRecur, 22)
+DECLARE_SYMBOL(kFactor, 31)
+DECLARE_SYMBOL(kNumber, 32)
+DECLARE_SYMBOL(kName, 33)
 
-extern const Symbol kExpr;
-extern const Symbol kExprRecur;
-extern const Symbol kTerm;
-extern const Symbol kTermRecur;
-extern const Symbol kFactor;
-
-extern const Symbol kAdd;
-extern const Symbol kSub;
-extern const Symbol kMul;
-extern const Symbol kDiv;
-extern const Symbol kLeftParen;
-extern const Symbol kRightParen;
-extern const Symbol kNumber;
-extern const Symbol kName;
+DECLARE_CHAR_SYMBOL(kAdd, '+')
+DECLARE_CHAR_SYMBOL(kSub, '-')
+DECLARE_CHAR_SYMBOL(kMul, '*')
+DECLARE_CHAR_SYMBOL(kDiv, '/')
+DECLARE_CHAR_SYMBOL(kLeftParen, '(')
+DECLARE_CHAR_SYMBOL(kRightParen, ')')
 
 std::string to_string(const Symbol &symbol);
 

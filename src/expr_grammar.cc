@@ -12,20 +12,20 @@ extern simple_logger::BaseLogger logger;
 
 namespace expr_grammar {
 
-const Symbol kExpr{Symbol::kNonTerminal, kExprID};
-const Symbol kExprRecur{Symbol::kNonTerminal, kExprRecurID};
-const Symbol kTerm{Symbol::kNonTerminal, kTermID};
-const Symbol kTermRecur{Symbol::kNonTerminal, kTermRecurID};
-const Symbol kFactor{Symbol::kNonTerminal, kFactorID};
+NON_TERMINAL(kExpr)
+NON_TERMINAL(kExprRecur)
+NON_TERMINAL(kTerm)
+NON_TERMINAL(kTermRecur)
+NON_TERMINAL(kFactor)
 
-const Symbol kAdd{Symbol::kTerminal, '+'};
-const Symbol kSub{Symbol::kTerminal, '-'};
-const Symbol kMul{Symbol::kTerminal, '*'};
-const Symbol kDiv{Symbol::kTerminal, '/'};
-const Symbol kLeftParen{Symbol::kTerminal, '('};
-const Symbol kRightParen{Symbol::kTerminal, ')'};
-const Symbol kNumber{Symbol::kTerminal, kNumberID};
-const Symbol kName{Symbol::kTerminal, kNameID};
+TERMINAL(kAdd)
+TERMINAL(kSub)
+TERMINAL(kMul)
+TERMINAL(kDiv)
+TERMINAL(kLeftParen)
+TERMINAL(kRightParen)
+TERMINAL(kNumber)
+TERMINAL(kName)
 
 string to_string(const Symbol &symbol) {
   switch (symbol.ID()) {

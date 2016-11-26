@@ -111,15 +111,15 @@ TEST_CASE("test expr tokenizer", "[Expr Tokenizer]") {
   bool result = tokenizer.LexicalAnalyze(s, tokens);
   REQUIRE(result);
 
-  REQUIRE(tokens[0].str == "a");
-  REQUIRE(tokens[1].str == "+");
-  REQUIRE(tokens[2].str == "999");
-  REQUIRE(tokens[3].str == "*");
-  REQUIRE(tokens[4].str == "(");
-  REQUIRE(tokens[5].str == "c");
-  REQUIRE(tokens[6].str == "-");
-  REQUIRE(tokens[7].str == "1");
-  REQUIRE(tokens[8].str == ")");
+  REQUIRE(tokens[0].text == "a");
+  REQUIRE(tokens[1].text == "+");
+  REQUIRE(tokens[2].text == "999");
+  REQUIRE(tokens[3].text == "*");
+  REQUIRE(tokens[4].text == "(");
+  REQUIRE(tokens[5].text == "c");
+  REQUIRE(tokens[6].text == "-");
+  REQUIRE(tokens[7].text == "1");
+  REQUIRE(tokens[8].text == ")");
 
   REQUIRE(tokens[0].symbol == kName);
   REQUIRE(tokens[1].symbol == kAdd);

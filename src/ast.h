@@ -18,7 +18,7 @@ class AstNode {
 
   AstNode(Token &&token)
       : symbol_(token.symbol),
-        str_(std::move(token.str)),
+        str_(std::move(token.text)),
         row_(token.row),
         column_(token.column) {}
 
@@ -39,7 +39,7 @@ class AstNode {
   }
 
   void FetchToken(Token &&token) {
-    str_ = std::move(token.str);
+    str_ = std::move(token.text);
     row_ = token.row;
     column_ = token.column;
   }
