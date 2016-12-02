@@ -17,15 +17,15 @@ using std::vector;
 
 BaseLogger logger;
 
-#define DEF_TEST_TERMINAL(name, offset) \
-static const Symbol name(Symbol::kTerminal, kStartID + (offset));
+#define DEF_TEST_TERMINAL(name, offset, s) \
+static const Symbol name(Symbol::kTerminal, kStartID + (offset), (s));
 
 /*----------------------------------------------------------------------------*/
 
-DEF_TEST_TERMINAL(k110, 1);
-DEF_TEST_TERMINAL(kNumber, 2);
-DEF_TEST_TERMINAL(kIf, 3);
-DEF_TEST_TERMINAL(kWord, 4);
+DEF_TEST_TERMINAL(k110, 1, "110");
+DEF_TEST_TERMINAL(kNumber, 2, "Number");
+DEF_TEST_TERMINAL(kIf, 3, "if");
+DEF_TEST_TERMINAL(kWord, 4, "Word");
 
 TEST_CASE("Build DFA") {
   TokenizerBuilder tokenizer_builder;
