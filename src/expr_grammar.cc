@@ -151,8 +151,8 @@ void Factor_Left_Expr_Right(void *grammar_data) {
   auto *expr_node = node_record.back();
   node_record.pop_back();
 
-  // assert(node_record.back()->symbol() == kLeftParen);
-  // node_record.back() = expr_node;
+  // assert(node_stack.back()->symbol() == kLeftParen);
+  // node_stack.back() = expr_node;
 
   // TODO
   while (node_record.back()->symbol() != kLeftParen) {

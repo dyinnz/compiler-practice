@@ -210,8 +210,8 @@ class GolikeGrammarData {
  public:
   GolikeGrammarData() : ast_(std::make_shared<Ast>()) {}
 
-  std::vector<AstNode *> &node_record() {
-    return node_record_;
+  std::vector<AstNode *> &node_stack() {
+    return node_stack_;
   }
 
   std::shared_ptr<Ast> ast() {
@@ -220,7 +220,7 @@ class GolikeGrammarData {
 
  private:
   std::shared_ptr<Ast> ast_;
-  std::vector<AstNode *> node_record_;
+  std::vector<AstNode *> node_stack_;
 };
 
 /**

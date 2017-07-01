@@ -290,11 +290,107 @@ static void TokenFeeder(void *grammar_data, Token &&token) {
   logger.debug("{}(): {}", __func__, to_string(token));
 
   auto ast_node = golike_data->ast()->CreateNode(move(token));
-  golike_data->node_record().push_back(ast_node);
+  golike_data->node_stack().push_back(ast_node);
 }
 
 static void EmptyFunction(void *grammar_data) {
   // do notghing
+}
+
+static void ParseExpr(void *grammar_data) {
+  auto golike_data = static_cast<GolikeGrammarData *>(grammar_data);
+
+  // UnaryExpr ExprRecur
+
+}
+
+static void ParseUnaryExpr(void *grammar_data) {
+  auto golike_data = static_cast<GolikeGrammarData *>(grammar_data);
+
+  // PrimaryExpr
+
+  // UnaryOp PrimaryExpr
+}
+
+static void ParsePrimaryExpr(void *grammar_data) {
+  auto golike_data = static_cast<GolikeGrammarData *>(grammar_data);
+  auto node_stack = golike_data->node_stack();
+
+  if (node_stack.back()->symbol() != kOperand) {
+    auto recur_op = node_stack.back();
+    node_stack.pop_back();
+    auto lhs = node_stack.back();
+    recur_op->push_child_front(lhs);
+
+    node_stack.back() = recur_op;
+  }
+}
+
+static void ParsePrimaryExprDot(void *grammar_data) {
+  auto golike_data = static_cast<GolikeGrammarData *>(grammar_data);
+  auto node_stack = golike_data->node_stack();
+
+  auto rhs = node_stack.back();
+  node_stack.pop_back();
+
+  auto dot = node_stack.back();
+  dot->push_child_back(rhs);
+}
+
+// TODO
+static void ParsePrimaryExprArray(void *grammar_data) {
+  auto golike_data = static_cast<GolikeGrammarData *>(grammar_data);
+  auto node_stack = golike_data->node_stack();
+
+  AstNode* recur_op = nullptr;
+  if (node_stack.back()->symbol() != kRightSquare) {
+    recur_op = node_stack.back();
+    node_stack.pop_back();
+  }
+
+  // pop right square
+  node_stack.pop_back();
+
+  auto index_node = node_stack.back();
+  node_stack.pop_back();
+
+  auto left_square = node_stack.back();
+  left_square->push_child_back(index_node);
+
+  if (recur_op) {
+    // pop left square
+    node_stack.pop_back();
+
+    recur_op->push_child_front(left_square);
+    node_stack.push_back(recur_op);
+  }
+}
+
+// TODO
+static void ParsePrimaryExprCall(void *grammar_data) {
+   auto golike_data = static_cast<GolikeGrammarData *>(grammar_data);
+  auto node_stack = golike_data->node_stack();
+
+  AstNode* recur_op = nullptr;
+  if (node_stack.back()->symbol() != kRightSquare) {
+    recur_op = node_stack.back();
+    node_stack.pop_back();
+  }
+
+  // pop right paren
+  node_stack.pop_back();
+
+  AstNode *param_node = nullptr;
+
+  auto left_paren = node_stack.back();
+
+  if (recur_op) {
+    // pop left paren
+    node_stack.pop_back();
+
+    recur_op->push_child_front(left_paren);
+    node_stack.push_back(recur_op);
+  }
 }
 
 Grammar BuildGolikeGrammar() {
@@ -566,13 +662,13 @@ Grammar BuildGolikeGrammar() {
 
   builder.InsertRule(kPrimaryExpr,
                      {kOperand, kPrimaryExprRecur},
-                     EmptyFunction);
+                     ParsePrimaryExpr);
   builder.InsertRule(kPrimaryExprRecur, {kEpsilonSymbol}, EmptyFunction);
   builder.InsertRule(kPrimaryExprRecur, {kDot, kPrimaryExpr},
-                     EmptyFunction);
+                     ParsePrimaryExprDot);
   builder.InsertRule(kPrimaryExprRecur,
                      {kLeftSquare, kExpr, kRightSquare, kPrimaryExprRecur},
-                     EmptyFunction);
+                     ParsePrimaryExprArray);
   builder.InsertRule(kPrimaryExprRecur,
                      {kLeftParen, kExprListLess, kRightParen, kPrimaryExprRecur},
                      EmptyFunction);
